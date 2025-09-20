@@ -81,18 +81,18 @@ module Icalendar
       return long_line if long_line.bytesize <= Icalendar::MAX_LINE_LENGTH
 
       chars = long_line.scan(ICAL_FOLD_LONG_LINE_SCAN_REGEX) # split in graphenes
-      folded = ['']
+      folded = [String.new]
       bytes = 0
-      while chars.count > 0
-        c = chars.shift
+      indent_bytes_count = indent.bytes.count
+      chars.each do |c|
         cb = c.bytes.count
-        if bytes + cb > Icalendar::MAX_LINE_LENGTH
-          # Split here
-          folded.push "#{indent}"
-          bytes = indent.bytes.count
-        end
-        folded[-1] += c
         bytes += cb
+        if bytes > Icalendar::MAX_LINE_LENGTH
+          # Split here
+          folded << indent.dup
+          bytes = indent_bytes_count + cb
+        end
+        folded[-1] << c
       end
 
       folded.join("\r\n")

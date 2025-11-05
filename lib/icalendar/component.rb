@@ -30,29 +30,43 @@ module Icalendar
     end
 
     def to_ical
-      [
-        "BEGIN:#{ical_name}",
-        ical_properties,
-        ical_components,
-        "END:#{ical_name}\r\n"
-      ].compact.join "\r\n"
+      buffer = String.new
+      buffer << "BEGIN:#{ical_name}\r\n"
+      append_ical_properties(buffer)
+      append_ical_components(buffer)
+      buffer << "END:#{ical_name}\r\n"
+      buffer
     end
 
     private
 
-    def ical_properties
-      (self.class.properties + custom_properties.keys).map do |prop|
-        value = property prop
-        unless value.nil?
-          if value.is_a? ::Array
-            value.map do |part|
-              ical_fold "#{ical_prop_name prop}#{part.to_ical self.class.default_property_types[prop]}"
-            end.join "\r\n" unless value.empty?
-          else
-            ical_fold "#{ical_prop_name prop}#{value.to_ical self.class.default_property_types[prop]}"
+    def append_ical_properties(buffer)
+      self.class.renderable_properties.each do |metadata|
+        value = __send__(metadata.reader)
+        next if value.nil?
+        if metadata.multi
+          next if value.empty?
+          value.each do |part|
+            buffer << ical_fold("#{metadata.wire_name}#{part.to_ical(metadata.default_type)}")
+            buffer << "\r\n"
           end
+        else
+          buffer << ical_fold("#{metadata.wire_name}#{value.to_ical(metadata.default_type)}")
+          buffer << "\r\n"
         end
-      end.compact.join "\r\n"
+      end
+
+      return if custom_properties.empty?
+      custom_properties.each do |prop, values|
+        next if values.nil? || values.empty?
+
+        wire_name = ical_prop_name(prop)
+        default_type = self.class.default_property_types[prop]
+        values.each do |custom_value|
+          buffer << ical_fold("#{wire_name}#{custom_value.to_ical(default_type)}")
+          buffer << "\r\n"
+        end
+      end
     end
 
     ICAL_PROP_NAME_GSUB_REGEX = /\Aip_/.freeze
@@ -80,6 +94,10 @@ module Icalendar
 
       return long_line if long_line.bytesize <= Icalendar::MAX_LINE_LENGTH
 
+      if long_line.ascii_only?
+        return fold_ascii(long_line, indent)
+      end
+
       chars = long_line.scan(ICAL_FOLD_LONG_LINE_SCAN_REGEX) # split in graphenes
       folded = [String.new]
       bytes = 0
@@ -97,15 +115,35 @@ module Icalendar
       folded.join("\r\n")
     end
 
-    def ical_components
-      collection = []
-      (self.class.components + custom_components.keys).each do |component_name|
-        components = send component_name
-        components.each do |component|
-          collection << component.to_ical
+    def fold_ascii(long_line, indent)
+      folded = String.new
+      line_bytes = 0
+      indent_bytesize = indent.bytesize
+      long_line.each_byte do |byte|
+        if line_bytes >= Icalendar::MAX_LINE_LENGTH
+          folded << "\r\n"
+          folded << indent
+          line_bytes = indent_bytesize
+        end
+        folded << byte.chr
+        line_bytes += 1
+      end
+      folded
+    end
+
+    def append_ical_components(buffer)
+      self.class.components.each do |component_name|
+        send(component_name).each do |component|
+          buffer << component.to_ical
         end
       end
-      collection.empty? ? nil : collection.join.chomp("\r\n")
+
+      return if custom_components.empty?
+      custom_components.each_value do |components|
+        components.each do |component|
+          buffer << component.to_ical
+        end
+      end
     end
 
     class << self

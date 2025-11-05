@@ -18,6 +18,7 @@ module Icalendar
 
     def ical_param(key, value)
       @ical_params[key] = value
+      @params_cached = false
     end
 
     def value
@@ -30,9 +31,14 @@ module Icalendar
     end
 
     def params_ical
-      unless ical_params.empty?
+      return @serialized_params if @params_cached
+      @serialized_params = if ical_params.empty?
+        nil
+      else
         ";#{ical_params.map { |name, value| param_ical name, value }.join ';'}"
       end
+      @params_cached = true
+      @serialized_params
     end
 
     VALUE_TYPE_GSUB_REGEX_1 = /\A.*::/.freeze

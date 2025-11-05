@@ -4,6 +4,9 @@ module Icalendar
 
   module HasProperties
 
+    PropertyMetadata = Struct.new(:name, :reader, :wire_name, :default_type, :multi)
+    PROPERTY_WIRE_NAME_GSUB_REGEX = /\Aip_/.freeze
+
     def self.included(base)
       base.extend ClassMethods
       base.class_eval do
@@ -99,6 +102,10 @@ module Icalendar
         @mutex_properties ||= []
       end
 
+      def renderable_properties
+        @renderable_properties ||= build_renderable_properties
+      end
+
       def default_property_types
         @default_property_types ||= Hash.new { |h,k| Icalendar::Values::Text }
       end
@@ -131,6 +138,7 @@ module Icalendar
       def single_property(prop, klass, new_property)
         self.single_properties << prop.to_s
         self.default_property_types[prop.to_s] = klass
+        reset_renderable_properties_cache
 
         define_method prop do
           instance_variable_get "@#{prop}"
@@ -144,6 +152,7 @@ module Icalendar
       def multi_property(prop, klass, new_property)
         self.multiple_properties << prop.to_s
         self.default_property_types[prop.to_s] = klass
+        reset_renderable_properties_cache
         property_var = "@#{prop}"
 
         define_method "#{prop}=" do |value|
@@ -166,6 +175,25 @@ module Icalendar
         define_method "append_#{prop}" do |value|
           send(prop) << map_property_value(value, klass, true, new_property)
         end
+      end
+
+      private
+
+      def build_renderable_properties
+        multi_lookup = multiple_properties.each_with_object({}) { |prop, h| h[prop] = true }
+        properties.map do |prop|
+          PropertyMetadata.new(
+            prop,
+            prop.to_sym,
+            prop.gsub(PROPERTY_WIRE_NAME_GSUB_REGEX, '').gsub('_', '-').upcase,
+            default_property_types[prop],
+            multi_lookup.key?(prop)
+          )
+        end
+      end
+
+      def reset_renderable_properties_cache
+        @renderable_properties = nil
       end
     end
 

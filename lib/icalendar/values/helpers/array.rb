@@ -33,9 +33,11 @@ module Icalendar
         def params_ical
           unless @params_merged
             value.each do |v|
+              v.params_ical # ensure child cache reflects current state
               ical_params.merge! v.ical_params
             end
             @params_merged = true
+            @params_cached = false
           end
           super
         end

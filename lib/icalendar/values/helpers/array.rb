@@ -11,6 +11,7 @@ module Icalendar
         def initialize(value, klass, params = {}, context = {})
           context = Icalendar::DowncasedHash(context)
           @value_delimiter = context['delimiter'] || ','
+          @params_merged = false
           mapped = if value.is_a? ::Array
                     value.map do |v|
                       if v.is_a? Icalendar::Values::Helpers::Array
@@ -30,8 +31,11 @@ module Icalendar
         end
 
         def params_ical
-          value.each do |v|
-            ical_params.merge! v.ical_params
+          unless @params_merged
+            value.each do |v|
+              ical_params.merge! v.ical_params
+            end
+            @params_merged = true
           end
           super
         end

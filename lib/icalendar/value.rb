@@ -39,7 +39,7 @@ module Icalendar
     VALUE_TYPE_GSUB_REGEX_2 = /(?<!\A)[A-Z]/.freeze
 
     def self.value_type
-      name.gsub(VALUE_TYPE_GSUB_REGEX_1, '').gsub(VALUE_TYPE_GSUB_REGEX_2, '-\0').upcase
+      @value_type ||= name.gsub(VALUE_TYPE_GSUB_REGEX_1, '').gsub(VALUE_TYPE_GSUB_REGEX_2, '-\0').upcase
     end
 
     def value_type

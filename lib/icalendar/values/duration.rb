@@ -19,23 +19,20 @@ module Icalendar
       end
 
       def value_ical
-        return "#{'-' if past?}P#{weeks}W" if weeks > 0
+        v = value
+        return "#{'-' if past?}P#{v.weeks}W" if v.weeks > 0
         builder = []
         builder << '-' if past?
         builder << 'P'
-        builder << "#{days}D" if days > 0
-        builder << 'T' if time?
-        builder << "#{hours}H" if hours > 0
-        builder << "#{minutes}M" if minutes > 0
-        builder << "#{seconds}S" if seconds > 0
+        builder << "#{v.days}D" if v.days > 0
+        builder << 'T' if v.hours > 0 || v.minutes > 0 || v.seconds > 0
+        builder << "#{v.hours}H" if v.hours > 0
+        builder << "#{v.minutes}M" if v.minutes > 0
+        builder << "#{v.seconds}S" if v.seconds > 0
         builder.join
       end
 
       private
-
-      def time?
-        hours > 0 || minutes > 0 || seconds > 0
-      end
 
       DURATION_PAST_REGEX = /\A([+-])P/.freeze
       DURATION_WEEKS_REGEX = /(\d+)W/.freeze

@@ -118,6 +118,18 @@ describe Icalendar::Parser do
         end
       end
     end
+
+    context 'with a non-ASCII property name' do
+      let(:source) do
+        "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:test\r\n" \
+          "BEGIN:VEVENT\r\nUID:1\r\nDTSTAMP:20240101T000000Z\r\n" \
+          "X-CAFÉ:ok\r\nSUMMARY:still parsed\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n"
+      end
+
+      it 'does not raise and still parses the remaining properties' do
+        expect(subject.parse.first.events.first.summary.value).to eq 'still parsed'
+      end
+    end
   end
 
   describe '#parse with invalid nesting' do

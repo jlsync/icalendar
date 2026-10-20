@@ -36,7 +36,7 @@ module Icalendar
 
     def property(property_name)
       property_name = property_name.downcase
-      if self.class.properties.include? property_name
+      if self.class.single_property?(property_name) || self.class.multiple_property?(property_name)
         send property_name
       else
         custom_property property_name
@@ -49,9 +49,9 @@ module Icalendar
 
     def append_custom_property(property_name, value)
       property_name = property_name.downcase
-      if self.class.single_properties.include? property_name
+      if self.class.single_property?(property_name)
         send "#{property_name}=", value
-      elsif self.class.multiple_properties.include? property_name
+      elsif self.class.multiple_property?(property_name)
         send "append_#{property_name}", value
       elsif value.is_a? Icalendar::Value
         (custom_properties[property_name] ||= []) << value
@@ -88,6 +88,14 @@ module Icalendar
 
       def multiple_properties
         @multiple_properties ||= []
+      end
+
+      def single_property?(prop)
+        single_properties.include?(prop.to_s)
+      end
+
+      def multiple_property?(prop)
+        multiple_properties.include?(prop.to_s)
       end
 
       def required_properties
@@ -140,9 +148,7 @@ module Icalendar
         self.default_property_types[prop.to_s] = klass
         reset_renderable_properties_cache
 
-        define_method prop do
-          instance_variable_get "@#{prop}"
-        end
+        attr_reader prop.to_sym
 
         define_method "#{prop}=" do |value|
           instance_variable_set "@#{prop}", map_property_value(value, klass, false, new_property)
@@ -167,10 +173,11 @@ module Icalendar
         end
 
         define_method prop do
-          if instance_variable_defined? property_var
-            instance_variable_get property_var
-          else
+          value = instance_variable_get property_var
+          if value.nil? && !instance_variable_defined?(property_var)
             send "#{prop}=", nil
+          else
+            value
           end
         end
 

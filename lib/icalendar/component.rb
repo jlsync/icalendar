@@ -47,12 +47,10 @@ module Icalendar
         if metadata.multi
           next if value.empty?
           value.each do |part|
-            buffer << ical_fold("#{metadata.wire_name}#{part.to_ical(metadata.default_type)}")
-            buffer << "\r\n"
+            append_ical_line(buffer, metadata.wire_name, part.to_ical(metadata.default_type))
           end
         else
-          buffer << ical_fold("#{metadata.wire_name}#{value.to_ical(metadata.default_type)}")
-          buffer << "\r\n"
+          append_ical_line(buffer, metadata.wire_name, value.to_ical(metadata.default_type))
         end
       end
 
@@ -63,16 +61,21 @@ module Icalendar
         wire_name = ical_prop_name(prop)
         default_type = self.class.default_property_types[prop]
         values.each do |custom_value|
-          buffer << ical_fold("#{wire_name}#{custom_value.to_ical(default_type)}")
-          buffer << "\r\n"
+          append_ical_line(buffer, wire_name, custom_value.to_ical(default_type))
         end
       end
     end
 
-    ICAL_PROP_NAME_GSUB_REGEX = /\Aip_/.freeze
+    def append_ical_line(buffer, wire_name, value_ical)
+      if wire_name.bytesize + value_ical.bytesize <= Icalendar::MAX_LINE_LENGTH
+        buffer << wire_name << value_ical << "\r\n"
+      else
+        buffer << ical_fold(wire_name + value_ical) << "\r\n"
+      end
+    end
 
     def ical_prop_name(prop_name)
-      prop_name.gsub(ICAL_PROP_NAME_GSUB_REGEX, '').gsub('_', '-').upcase
+      prop_name.delete_prefix('ip_').tr('_', '-').upcase
     end
 
     ICAL_FOLD_LONG_LINE_SCAN_REGEX = /\P{M}\p{M}*/u.freeze
@@ -98,7 +101,7 @@ module Icalendar
         return fold_ascii(long_line, indent)
       end
 
-      chars = long_line.scan(ICAL_FOLD_LONG_LINE_SCAN_REGEX) # split in graphenes
+      chars = long_line.scan(ICAL_FOLD_LONG_LINE_SCAN_REGEX) # split in graphemes
       folded = [String.new]
       bytes = 0
       indent_bytesize = indent.bytesize
@@ -116,17 +119,18 @@ module Icalendar
     end
 
     def fold_ascii(long_line, indent)
-      folded = String.new
-      line_bytes = 0
-      indent_bytesize = indent.bytesize
-      long_line.each_byte do |byte|
-        if line_bytes >= Icalendar::MAX_LINE_LENGTH
-          folded << "\r\n"
-          folded << indent
-          line_bytes = indent_bytesize
-        end
-        folded << byte.chr
-        line_bytes += 1
+      max_line_length = Icalendar::MAX_LINE_LENGTH
+      continuation_length = max_line_length - indent.bytesize
+      continuation_length = 1 if continuation_length < 1
+      size = long_line.bytesize
+      folded = String.new(capacity: size + ((size / continuation_length) + 1) * (2 + indent.bytesize))
+
+      folded << long_line.byteslice(0, max_line_length)
+      offset = max_line_length
+      while offset < size
+        folded << "\r\n" << indent
+        folded << long_line.byteslice(offset, continuation_length)
+        offset += continuation_length
       end
       folded
     end

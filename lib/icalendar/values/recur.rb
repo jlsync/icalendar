@@ -42,20 +42,21 @@ module Icalendar
       end
 
       def value_ical
-        builder = ["FREQ=#{frequency}"]
-        builder << "UNTIL=#{self.until}" unless self.until.nil?
-        builder << "COUNT=#{count}" unless count.nil?
-        builder << "INTERVAL=#{interval}" unless interval.nil?
-        builder << "BYSECOND=#{by_second.join ','}" unless by_second.nil?
-        builder << "BYMINUTE=#{by_minute.join ','}" unless by_minute.nil?
-        builder << "BYHOUR=#{by_hour.join ','}" unless by_hour.nil?
-        builder << "BYDAY=#{by_day.join ','}" unless by_day.nil?
-        builder << "BYMONTHDAY=#{by_month_day.join ','}" unless by_month_day.nil?
-        builder << "BYYEARDAY=#{by_year_day.join ','}" unless by_year_day.nil?
-        builder << "BYWEEKNO=#{by_week_number.join ','}" unless by_week_number.nil?
-        builder << "BYMONTH=#{by_month.join ','}" unless by_month.nil?
-        builder << "BYSETPOS=#{by_set_position.join ','}" unless by_set_position.nil?
-        builder << "WKST=#{week_start}" unless week_start.nil?
+        v = value
+        builder = ["FREQ=#{v.frequency}"]
+        builder << "UNTIL=#{v.until}" unless v.until.nil?
+        builder << "COUNT=#{v.count}" unless v.count.nil?
+        builder << "INTERVAL=#{v.interval}" unless v.interval.nil?
+        builder << "BYSECOND=#{v.by_second.join ','}" unless v.by_second.nil?
+        builder << "BYMINUTE=#{v.by_minute.join ','}" unless v.by_minute.nil?
+        builder << "BYHOUR=#{v.by_hour.join ','}" unless v.by_hour.nil?
+        builder << "BYDAY=#{v.by_day.join ','}" unless v.by_day.nil?
+        builder << "BYMONTHDAY=#{v.by_month_day.join ','}" unless v.by_month_day.nil?
+        builder << "BYYEARDAY=#{v.by_year_day.join ','}" unless v.by_year_day.nil?
+        builder << "BYWEEKNO=#{v.by_week_number.join ','}" unless v.by_week_number.nil?
+        builder << "BYMONTH=#{v.by_month.join ','}" unless v.by_month.nil?
+        builder << "BYSETPOS=#{v.by_set_position.join ','}" unless v.by_set_position.nil?
+        builder << "WKST=#{v.week_start}" unless v.week_start.nil?
         builder.join ';'
       end
 

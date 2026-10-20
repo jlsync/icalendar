@@ -72,7 +72,7 @@ module Icalendar
       else
         param_value = escape_param_value param_value
       end
-      "#{name.to_s.gsub('_', '-').upcase}=#{param_value}"
+      "#{name.to_s.tr('_', '-').upcase}=#{param_value}"
     end
 
     ESCAPE_PARAM_VALUE_REGEX = /[;:,]/.freeze

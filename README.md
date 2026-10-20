@@ -16,6 +16,8 @@ DESCRIPTION
 iCalendar is a Ruby library for dealing with iCalendar files in the
 iCalendar format defined by [RFC-5545](http://tools.ietf.org/html/rfc5545).
 
+Requires Ruby 3.4 or newer.
+
 EXAMPLES
 ---
 

@@ -17,12 +17,76 @@ describe 'TZInfo::Timezone' do
     specify { expect(subject.standards.first.tzoffsetfrom.value_ical).to eq "+0200" }
   end
 
+  describe 'negative fractional-hour offsets' do
+    let(:tz) { TZInfo::Timezone.get 'America/St_Johns' }
+
+    [DateTime.new(2021, 1, 1), DateTime.new(2021, 7, 1)].each do |reference_date|
+      context reference_date.to_s do
+        let(:date) { reference_date }
+
+        it 'round-trips the standard and daylight offsets' do
+          calendar = Icalendar::Calendar.new
+          calendar.add_timezone subject
+          parsed = Icalendar::Calendar.parse(calendar.to_ical).first.timezones.first
+
+          expect(parsed.daylights.first.tzoffsetfrom.value_ical).to eq '-0330'
+          expect(parsed.daylights.first.tzoffsetto.value_ical).to eq '-0230'
+          expect(parsed.standards.first.tzoffsetfrom.value_ical).to eq '-0230'
+          expect(parsed.standards.first.tzoffsetto.value_ical).to eq '-0330'
+        end
+      end
+    end
+  end
+
   describe 'daylight recurrence rule' do
     specify { expect(subject.daylights.first.rrule.first.value_ical).to eq "FREQ=YEARLY;BYDAY=-1SU;BYMONTH=3" }
   end
 
   describe 'standard recurrence rule' do
     specify { expect(subject.standards.first.rrule.first.value_ical).to eq "FREQ=YEARLY;BYDAY=-1SU;BYMONTH=10" }
+  end
+
+  describe 'transition onset' do
+    let(:date) { DateTime.new 2021, 7, 1 }
+
+    {
+      'Europe/Stockholm' => {
+        daylight: ['20210328T020000', '+0100', '20210328T010000Z'],
+        standard: ['20211031T030000', '+0200', '20211031T010000Z']
+      },
+      'Australia/Lord_Howe' => {
+        daylight: ['20211003T020000', '+1030', '20211002T153000Z'],
+        standard: ['20210404T020000', '+1100', '20210403T150000Z']
+      }
+    }.each do |identifier, transitions|
+      context identifier do
+        let(:tz) { TZInfo::Timezone.get identifier }
+
+        transitions.each do |kind, (local, offset, utc)|
+          it "serializes the #{kind} onset using the previous offset" do
+            calendar = Icalendar::Calendar.new
+            calendar.add_timezone subject
+            parsed = Icalendar::Calendar.parse(calendar.to_ical).first.timezones.first
+            component = parsed.public_send("#{kind}s").first
+
+            expect(component.dtstart.value_ical).to eq local
+            expect(component.tzoffsetfrom.value_ical).to eq offset
+            onset = DateTime.strptime("#{component.dtstart.value_ical}#{offset}", '%Y%m%dT%H%M%S%z')
+            expect(onset.new_offset(0).strftime('%Y%m%dT%H%M%SZ')).to eq utc
+          end
+        end
+      end
+    end
+
+    context 'when the clock change crosses midnight' do
+      let(:tz) { TZInfo::Timezone.get 'America/Santiago' }
+
+      it 'uses the previous-offset date for both DTSTART and the recurrence rule' do
+        standard = subject.standards.first
+        expect(standard.dtstart.value_ical).to eq '20210404T000000'
+        expect(standard.rrule.first.value_ical).to eq 'FREQ=YEARLY;BYDAY=1SU;BYMONTH=4'
+      end
+    end
   end
 
   describe 'no end transition' do
@@ -34,7 +98,7 @@ describe 'TZInfo::Timezone' do
 BEGIN:VTIMEZONE
 TZID:Asia/Shanghai
 BEGIN:STANDARD
-DTSTART:19910915T010000
+DTSTART:19910915T020000
 TZOFFSETFROM:+0900
 TZOFFSETTO:+0800
 TZNAME:CST
@@ -107,4 +171,23 @@ END:VTIMEZONE
     end
   end
 
+end
+
+
+describe Icalendar::TimezoneOffset do
+  {
+    -12600 => '-0330',
+    -34200 => '-0930',
+    -1800 => '-0030',
+    -3600 => '-0100',
+    0 => '+0000',
+    19800 => '+0530',
+    20700 => '+0545'
+  }.each do |seconds, expected|
+    it "formats #{seconds} seconds as #{expected}" do
+      offset = Object.new.extend(described_class)
+      allow(offset).to receive(:utc_total_offset).and_return(seconds)
+      expect(offset.ical_offset).to eq expected
+    end
+  end
 end

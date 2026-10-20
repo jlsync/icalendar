@@ -18,8 +18,7 @@ jobs:
       fail-fast: false
       matrix:
         ruby:
-          - 3.3
-          - 3.4
+          - "3.4"
           - "4.0"
 
     steps:
@@ -28,6 +27,7 @@ jobs:
       uses: ruby/setup-ruby@v1
       with:
         ruby-version: ${{ matrix.ruby }}
+        bundler: "4.0"
         bundler-cache: true
     - name: Run rspec tests
       run: bundle exec rake spec

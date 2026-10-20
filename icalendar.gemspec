@@ -29,30 +29,21 @@ ActiveSupport is required for TimeWithZone support, but not required for general
   s.executables = `git ls-files -- bin/*`.split("\n").map { |f| File.basename f }
   s.require_paths = ['lib']
 
-  s.required_ruby_version = '>= 2.5.0'
+  s.required_ruby_version = '>= 3.4.0'
 
   s.add_dependency 'base64'
   s.add_dependency 'ice_cube', '~> 0.16'
   s.add_dependency 'logger'
 
-  s.add_development_dependency 'rake', '~> 13.0'
-  s.add_development_dependency 'bundler'
+  s.add_development_dependency 'rake', '~> 13.4'
+  s.add_development_dependency 'bundler', '~> 4.0'
 
-  # test with all groups of tzinfo dependencies
-  # tzinfo 2.x
-  s.add_development_dependency 'activesupport', '~> 7.1'
-  s.add_development_dependency 'tzinfo', '~> 2.0'
-  s.add_development_dependency 'tzinfo-data', '~> 1.2020'
-  # tzinfo 1.x
-  # s.add_development_dependency 'activesupport', '~> 6.0'
-  # s.add_development_dependency 'tzinfo', '~> 1.2'
-  # s.add_development_dependency 'tzinfo-data', '~> 1.2020'
-  # tzinfo 0.x
-  # s.add_development_dependency 'tzinfo', '~> 0.3'
-  # end tzinfo
+  s.add_development_dependency 'activesupport', '~> 8.1'
+  s.add_development_dependency 'tzinfo', '~> 2.0.6'
+  s.add_development_dependency 'tzinfo-data', '~> 1.2026'
 
-  s.add_development_dependency 'timecop', '~> 0.9'
-  s.add_development_dependency 'rspec', '~> 3.8'
-  s.add_development_dependency 'simplecov', '~> 0.16'
-  s.add_development_dependency 'byebug'
+  s.add_development_dependency 'timecop', '~> 0.9.11'
+  s.add_development_dependency 'rspec', '~> 3.13'
+  s.add_development_dependency 'simplecov', '~> 1.3'
+  s.add_development_dependency 'byebug', '~> 13.0'
 end

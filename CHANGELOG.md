@@ -1,5 +1,10 @@
 ## Unreleased
 
+## 2.14.0 - 2026-10-20
+- Require Ruby 3.4 or newer and test against Ruby 3.4 and 4.0.
+- Update development dependencies, including ActiveSupport 8.1, Bundler 4.0, RSpec 3.13, and SimpleCov 1.3.
+- Omit empty category lists and preserve category boundaries after escaped backslashes when parsing.
+
 ## 2.13.0 - 2026-10-11
 - Generate `CATEGORIES` as a single comma-separated line instead of one line per value, matching how Google Calendar and Nextcloud expect it (#226). Setting `categories = [...]` now stores the joined value as one item, so code that reads `#categories` expecting one entry per category will see a single combined entry instead; `append_categories` is unaffected and still adds a separate line. - Carlos Kvasir
 - Replace OpenStruct with Structs in Duration, Recur and UtcOffset values and drop the ostruct dependency (#329). Requires Ruby 2.5 or newer, for `Struct`'s `keyword_init:`. The parts keep the same readers and setters, but `#value` is now a Struct, so assigning an attribute that isn't one of its parts raises `NoMethodError`. - David Corson-Knowles

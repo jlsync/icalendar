@@ -19,6 +19,22 @@ describe Icalendar do
     end
   end
 
+  describe 'categories ending in a backslash' do
+    [Icalendar::Calendar, Icalendar::Event, Icalendar::Todo, Icalendar::Journal].each do |klass|
+      it "preserves category boundaries in #{klass}" do
+        component = klass.new
+        component.categories = ['A\\', 'B']
+        source = component.to_ical
+        parser = Icalendar::Parser.new(source)
+        parser.component_class = klass
+        parsed = parser.parse.first
+
+        expect(parsed.categories.first.value).to eq ['A\\', 'B']
+        expect(parsed.to_ical).to eq source
+      end
+    end
+  end
+
   describe 'cleanly handle facebook organizers' do
     let(:source) { File.read File.join(File.dirname(__FILE__), 'fixtures', 'single_event_bad_organizer.ics') }
     let(:source_lowered_uri) { File.read File.join(File.dirname(__FILE__), 'fixtures', 'single_event_organizer_parsed.ics') }

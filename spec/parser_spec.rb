@@ -87,6 +87,47 @@ describe Icalendar::Parser do
     end
   end
 
+  describe '#parse with escaped property delimiters' do
+    { 'categories' => ',', 'description' => ';' }.each do |property, delimiter|
+      context property do
+        backslash = "\\"
+        {
+          'an unescaped delimiter' => ["A#{delimiter}B", ['A', 'B']],
+          'a leading empty value' => ["#{delimiter}A", ['', 'A']],
+          'an empty value between delimiters' => ["A#{delimiter}#{delimiter}B", ['A', '', 'B']],
+          'trailing empty values' => ["A#{delimiter}#{delimiter}", ['A']],
+          'an escaped delimiter' => ["A#{backslash}#{delimiter}B", "A#{delimiter}B"],
+          'a delimiter after an escaped backslash' => ["A#{backslash * 2}#{delimiter}B", ["A#{backslash}", 'B']],
+          'an escaped delimiter after an escaped backslash' => ["A#{backslash * 3}#{delimiter}B", "A#{backslash}#{delimiter}B"],
+          'a delimiter after two escaped backslashes' => ["A#{backslash * 4}#{delimiter}B", ["A#{backslash * 2}", 'B']],
+          'an escaped delimiter before an unescaped delimiter' => ["A#{backslash}#{delimiter}B#{delimiter}C", ["A#{delimiter}B", 'C']]
+        }.each do |description, (encoded, expected)|
+          context "with #{description}" do
+            let(:source) do
+              "BEGIN:VCALENDAR\r\nBEGIN:VEVENT\r\n#{property.upcase}:#{encoded}\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n"
+            end
+
+            it 'preserves the decoded values and their boundaries' do
+              event = subject.parse.first.events.first
+              parsed = event.public_send(property)
+              parsed = parsed.first if property == 'categories'
+
+              expect(parsed.value).to eq expected
+            end
+          end
+        end
+      end
+    end
+  end
+
+  describe '#parse with invalid nesting' do
+    let(:fn) { 'invalid_nesting.ics' }
+
+    it 'raises a ParseError' do
+      expect { subject.parse }.to raise_error Icalendar::Parser::ParseError
+    end
+  end
+
   describe '#parse with bad line' do
     let(:fn) { 'single_event_bad_line.ics' }
 

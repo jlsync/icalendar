@@ -63,7 +63,8 @@ module Icalendar
     end
 
     def rrule
-      start = (respond_to?(:local_start_at) ? local_start_at : local_start).to_datetime
+      # RFC 5545 defines the onset in local time using TZOFFSETFROM.
+      start = (respond_to?(:local_end_at) ? local_end_at : local_end).to_datetime
       # this is somewhat of a hack, but seems to work ok
       # assumes that no timezone transition is in law as "4th X of the month"
       # but only as 1st X, 2nd X, 3rd X, or Last X
@@ -78,14 +79,15 @@ module Icalendar
     end
 
     def dtstart
-      (respond_to?(:local_start_at) ? local_start_at : local_start).to_datetime.strftime '%Y%m%dT%H%M%S'
+      (respond_to?(:local_end_at) ? local_end_at : local_end).to_datetime.strftime '%Y%m%dT%H%M%S'
     end
   end
 
   module TimezoneOffset
     def ical_offset
       o = utc_total_offset
-      sprintf '%+-2.2d%2.2d', (o / 3600).to_i, ((o / 60) % 60).to_i
+      magnitude = o.abs
+      sprintf '%s%02d%02d', o < 0 ? '-' : '+', magnitude / 3600, (magnitude / 60) % 60
     end
   end
 end

@@ -6,8 +6,9 @@ require 'stringio'
 module Icalendar
 
   class Parser
-    attr_writer :component_class
+    attr_writer :component_class, :parse_depth_limit
     attr_reader :source, :strict, :timezone_store, :verbose
+    attr_accessor :parse_depth
 
     CLEAN_BAD_WRAPPING_GSUB_REGEX = /\r?\n[ \t]/.freeze
 
@@ -39,6 +40,7 @@ module Icalendar
       read_in_data
       @strict = strict
       @verbose = verbose
+      @parse_depth = 0
       @timezone_store = TimezoneStore.new
     end
 
@@ -76,15 +78,16 @@ module Icalendar
       end
     end
 
-    WRAP_PROPERTY_VALUE_DELIMETER_REGEX = /(?<!\\)([,;])/.freeze
-    WRAP_PROPERTY_VALUE_SPLIT_REGEX = /(?<!\\)[;,]/.freeze
+    # An even number of backslashes leaves the following delimiter unescaped.
+    WRAP_PROPERTY_VALUE_DELIMETER_REGEX = /(?<!\\)(?:\\\\)*([,;])/.freeze
+    WRAP_PROPERTY_VALUE_SPLIT_REGEX = /(?<!\\)(?:\\\\)*([;,])/.freeze
 
 
     def wrap_property_value(component, fields, multi_property)
       klass = get_wrapper_class component, fields
       if wrap_in_array? klass, fields[:value], multi_property
         delimiter = fields[:value].match(WRAP_PROPERTY_VALUE_DELIMETER_REGEX)[1]
-        Icalendar::Values::Helpers::Array.new fields[:value].split(WRAP_PROPERTY_VALUE_SPLIT_REGEX),
+        Icalendar::Values::Helpers::Array.new split_property_value(fields[:value]),
                                      klass,
                                      fields[:params],
                                      delimiter: delimiter,
@@ -98,8 +101,8 @@ module Icalendar
       retry
     end
 
-    WRAP_IN_ARRAY_REGEX_1 = /(?<!\\)[,;]/.freeze
-    WRAP_IN_ARRAY_REGEX_2 = /(?<!\\);/.freeze
+    WRAP_IN_ARRAY_REGEX_1 = /(?<!\\)(?:\\\\)*[,;]/.freeze
+    WRAP_IN_ARRAY_REGEX_2 = /(?<!\\)(?:\\\\)*;/.freeze
 
     def wrap_in_array?(klass, value, multi_property)
       klass.value_type != 'RECUR' &&
@@ -135,13 +138,33 @@ module Icalendar
 
     private
 
+    def split_property_value(value)
+      parts = []
+      start = 0
+      value.scan(WRAP_PROPERTY_VALUE_SPLIT_REGEX) do
+        delimiter = Regexp.last_match
+        parts << value[start...delimiter.begin(1)]
+        start = delimiter.end(1)
+      end
+      parts << value[start..-1]
+      parts.pop while parts.last == ''
+      parts
+    end
+
     def component_class
       @component_class ||= Icalendar::Calendar
+    end
+
+    def parse_depth_limit
+      # a valid ics file should only have 3 levels. Leaving some room for non-compliant custom components
+      @parse_depth_limit ||= 5
     end
 
     PARSE_COMPONENT_KLASS_NAME_GSUB_REGEX = /\AV/.freeze
 
     def parse_component(component)
+      self.parse_depth += 1
+      raise ParseError.new("ics file nested too deeply") if parse_depth > parse_depth_limit
       while (fields = next_fields)
         if fields[:name] == 'end'
           klass_name = fields[:value].gsub(PARSE_COMPONENT_KLASS_NAME_GSUB_REGEX, '').downcase.capitalize
@@ -161,6 +184,7 @@ module Icalendar
           parse_property component, fields
         end
       end
+      self.parse_depth -= 1
       component
     end
 

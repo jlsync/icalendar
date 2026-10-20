@@ -1,5 +1,25 @@
 ## Unreleased
 
+## 2.13.0 - 2026-10-11
+- Generate `CATEGORIES` as a single comma-separated line instead of one line per value, matching how Google Calendar and Nextcloud expect it (#226). Setting `categories = [...]` now stores the joined value as one item, so code that reads `#categories` expecting one entry per category will see a single combined entry instead; `append_categories` is unaffected and still adds a separate line. - Carlos Kvasir
+- Replace OpenStruct with Structs in Duration, Recur and UtcOffset values and drop the ostruct dependency (#329). Requires Ruby 2.5 or newer, for `Struct`'s `keyword_init:`. The parts keep the same readers and setters, but `#value` is now a Struct, so assigning an attribute that isn't one of its parts raises `NoMethodError`. - David Corson-Knowles
+- Correct negative fractional-hour TZInfo offsets - ac1982
+
+## 2.12.5 - 2026-09-25
+- Generate timezone transition onsets and recurrence dates using the previous UTC offset. - Ben Abulafia
+- Limit parsing depth
+- Remove TZID from DATE values - Henry Blyth
+
+## 2.12.4 - 2026-07-31
+- TEXT unescape fix - Vincent Gao
+
+## 2.12.3 - 2026-05-13
+- Memory use optimization - Jared Menard
+- Run CI against Ruby 4.0 - Artem Chubchenko
+
+## 2.12.2 - 2026-03-21
+- Fix a potential property injection issue through escaping control characters in URI values - Wes Ring
+
 ## 2.12.1 - 2025-10-19
 - Fix a problem with invalid ics generation for calendars with custom properties that include a `tzid` parameter.
 

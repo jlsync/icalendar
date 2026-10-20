@@ -78,15 +78,16 @@ module Icalendar
       end
     end
 
-    WRAP_PROPERTY_VALUE_DELIMETER_REGEX = /(?<!\\)([,;])/.freeze
-    WRAP_PROPERTY_VALUE_SPLIT_REGEX = /(?<!\\)[;,]/.freeze
+    # An even number of backslashes leaves the following delimiter unescaped.
+    WRAP_PROPERTY_VALUE_DELIMETER_REGEX = /(?<!\\)(?:\\\\)*([,;])/.freeze
+    WRAP_PROPERTY_VALUE_SPLIT_REGEX = /(?<!\\)(?:\\\\)*([;,])/.freeze
 
 
     def wrap_property_value(component, fields, multi_property)
       klass = get_wrapper_class component, fields
       if wrap_in_array? klass, fields[:value], multi_property
         delimiter = fields[:value].match(WRAP_PROPERTY_VALUE_DELIMETER_REGEX)[1]
-        Icalendar::Values::Helpers::Array.new fields[:value].split(WRAP_PROPERTY_VALUE_SPLIT_REGEX),
+        Icalendar::Values::Helpers::Array.new split_property_value(fields[:value]),
                                      klass,
                                      fields[:params],
                                      delimiter: delimiter,
@@ -100,8 +101,8 @@ module Icalendar
       retry
     end
 
-    WRAP_IN_ARRAY_REGEX_1 = /(?<!\\)[,;]/.freeze
-    WRAP_IN_ARRAY_REGEX_2 = /(?<!\\);/.freeze
+    WRAP_IN_ARRAY_REGEX_1 = /(?<!\\)(?:\\\\)*[,;]/.freeze
+    WRAP_IN_ARRAY_REGEX_2 = /(?<!\\)(?:\\\\)*;/.freeze
 
     def wrap_in_array?(klass, value, multi_property)
       klass.value_type != 'RECUR' &&
@@ -136,6 +137,19 @@ module Icalendar
     end
 
     private
+
+    def split_property_value(value)
+      parts = []
+      start = 0
+      value.scan(WRAP_PROPERTY_VALUE_SPLIT_REGEX) do
+        delimiter = Regexp.last_match
+        parts << value[start...delimiter.begin(1)]
+        start = delimiter.end(1)
+      end
+      parts << value[start..-1]
+      parts.pop while parts.last == ''
+      parts
+    end
 
     def component_class
       @component_class ||= Icalendar::Calendar

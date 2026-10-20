@@ -29,8 +29,11 @@ module Icalendar
       SecureRandom.uuid
     end
 
-    def to_ical
-      buffer = String.new
+    COLON = ':'
+    CRLF = "\r\n"
+
+    def to_ical(buffer = nil)
+      buffer ||= String.new
       buffer << "BEGIN:#{ical_name}\r\n"
       append_ical_properties(buffer)
       append_ical_components(buffer)
@@ -40,6 +43,29 @@ module Icalendar
 
     private
 
+    def append_ical_property(buffer, wire_name, value, default_type)
+      if value.is_a?(Icalendar::Value)
+        value.ical_param('value', value.value_type) if value.send(:needs_value_type?, default_type)
+        params = value.params_ical
+        val = value.value_ical
+        if params
+          if wire_name.bytesize + params.bytesize + 1 + val.bytesize <= Icalendar::MAX_LINE_LENGTH
+            buffer << wire_name << params << COLON << val << CRLF
+            return
+          end
+          buffer << ical_fold(wire_name + params + COLON + val) << CRLF
+        else
+          if wire_name.bytesize + 1 + val.bytesize <= Icalendar::MAX_LINE_LENGTH
+            buffer << wire_name << COLON << val << CRLF
+            return
+          end
+          buffer << ical_fold(wire_name + COLON + val) << CRLF
+        end
+      else
+        append_ical_line(buffer, wire_name, value.to_ical(default_type))
+      end
+    end
+
     def append_ical_properties(buffer)
       self.class.renderable_properties.each do |metadata|
         value = __send__(metadata.reader)
@@ -47,10 +73,10 @@ module Icalendar
         if metadata.multi
           next if value.empty?
           value.each do |part|
-            append_ical_line(buffer, metadata.wire_name, part.to_ical(metadata.default_type))
+            append_ical_property(buffer, metadata.wire_name, part, metadata.default_type)
           end
         else
-          append_ical_line(buffer, metadata.wire_name, value.to_ical(metadata.default_type))
+          append_ical_property(buffer, metadata.wire_name, value, metadata.default_type)
         end
       end
 
@@ -61,16 +87,16 @@ module Icalendar
         wire_name = ical_prop_name(prop)
         default_type = self.class.default_property_types[prop]
         values.each do |custom_value|
-          append_ical_line(buffer, wire_name, custom_value.to_ical(default_type))
+          append_ical_property(buffer, wire_name, custom_value, default_type)
         end
       end
     end
 
     def append_ical_line(buffer, wire_name, value_ical)
       if wire_name.bytesize + value_ical.bytesize <= Icalendar::MAX_LINE_LENGTH
-        buffer << wire_name << value_ical << "\r\n"
+        buffer << wire_name << value_ical << CRLF
       else
-        buffer << ical_fold(wire_name + value_ical) << "\r\n"
+        buffer << ical_fold(wire_name + value_ical) << CRLF
       end
     end
 
@@ -101,21 +127,19 @@ module Icalendar
         return fold_ascii(long_line, indent)
       end
 
-      chars = long_line.scan(ICAL_FOLD_LONG_LINE_SCAN_REGEX) # split in graphemes
-      folded = [String.new]
+      folded = String.new(capacity: long_line.bytesize + 64)
       bytes = 0
       indent_bytesize = indent.bytesize
-      chars.each do |c|
-        bytes += c.bytesize
-        if bytes > Icalendar::MAX_LINE_LENGTH
-          # Split here
-          folded << indent.dup
-          bytes = indent_bytesize + c.bytesize
+      long_line.scan(ICAL_FOLD_LONG_LINE_SCAN_REGEX) do |c|
+        c_bytes = c.bytesize
+        if bytes + c_bytes > Icalendar::MAX_LINE_LENGTH
+          folded << CRLF << indent
+          bytes = indent_bytesize
         end
-        folded[-1] << c
+        folded << c
+        bytes += c_bytes
       end
-
-      folded.join("\r\n")
+      folded
     end
 
     def fold_ascii(long_line, indent)
@@ -128,7 +152,7 @@ module Icalendar
       folded << long_line.byteslice(0, max_line_length)
       offset = max_line_length
       while offset < size
-        folded << "\r\n" << indent
+        folded << CRLF << indent
         folded << long_line.byteslice(offset, continuation_length)
         offset += continuation_length
       end
@@ -138,14 +162,14 @@ module Icalendar
     def append_ical_components(buffer)
       self.class.components.each do |component_name|
         send(component_name).each do |component|
-          buffer << component.to_ical
+          component.to_ical(buffer)
         end
       end
 
       return if custom_components.empty?
       custom_components.each_value do |components|
         components.each do |component|
-          buffer << component.to_ical
+          component.to_ical(buffer)
         end
       end
     end

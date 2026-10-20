@@ -65,9 +65,9 @@ module Icalendar
       prop_value = wrap_property_value component, fields, multi_property
       begin
         method_name = if multi_property
-          "append_#{prop_name}"
+          APPEND_METHODS[prop_name] ||= :"append_#{prop_name}"
         else
-          "#{prop_name}="
+          SETTER_METHODS[prop_name] ||= :"#{prop_name}="
         end
         component.send method_name, prop_value
       rescue NoMethodError => nme
@@ -81,22 +81,24 @@ module Icalendar
       end
     end
 
-    # An even number of backslashes leaves the following delimiter unescaped.
-    WRAP_PROPERTY_VALUE_DELIMETER_REGEX = /(?<!\\)(?:\\\\)*([,;])/.freeze
-    WRAP_PROPERTY_VALUE_SPLIT_REGEX = /(?<!\\)(?:\\\\)*([;,])/.freeze
+    SETTER_METHODS = {}
+    APPEND_METHODS = {}
 
+    # An even number of backslashes leaves the following delimiter unescaped.
+    WRAP_PROPERTY_VALUE_SPLIT_REGEX = /(?<!\\)(?:\\\\)*([;,])/.freeze
 
     def wrap_property_value(component, fields, multi_property)
       klass = get_wrapper_class component, fields
+      tz_context = (@timezone_context ||= Icalendar::DowncasedHash.new(timezone_store: timezone_store))
       if wrap_in_array? klass, fields[:value], multi_property
-        delimiter = fields[:value].match(WRAP_PROPERTY_VALUE_DELIMETER_REGEX)[1]
-        Icalendar::Values::Helpers::Array.new split_property_value(fields[:value]),
+        parts, delimiter = split_property_value_and_delimiter(fields[:value])
+        Icalendar::Values::Helpers::Array.new parts,
                                      klass,
                                      fields[:params],
                                      delimiter: delimiter,
-                                     timezone_store: timezone_store
+                                     context: tz_context
       else
-        klass.new fields[:value], fields[:params], timezone_store: timezone_store
+        klass.new fields[:value], fields[:params], tz_context
       end
     rescue Icalendar::Values::DateTime::FormatError => fe
       raise fe if strict?
@@ -119,16 +121,17 @@ module Icalendar
 
     def get_wrapper_class(component, fields)
       klass = component.class.default_property_types[fields[:name]]
-      if !fields[:params]['value'].nil?
-        klass_name = fields[:params].delete('value').first
-        unless klass_name.upcase == klass.value_type
-          klass_name = "Icalendar::Values::#{klass_name.downcase.gsub(GET_WRAPPER_CLASS_GSUB_REGEX) { |m| m[-1].upcase }}"
-          begin
-            klass = Object.const_get klass_name if Object.const_defined?(klass_name)
-          rescue NameError => e
-            Icalendar.logger.error "NameError trying to find value type for #{component.name} | #{fields[:name]}: #{e.message}"
-            raise e if strict?
-          end
+      params = fields[:params]
+      return klass if params.empty? || params['value'].nil?
+
+      klass_name = params.delete('value').first
+      unless klass_name.upcase == klass.value_type
+        klass_name = "Icalendar::Values::#{klass_name.downcase.gsub(GET_WRAPPER_CLASS_GSUB_REGEX) { |m| m[-1].upcase }}"
+        begin
+          klass = Object.const_get klass_name if Object.const_defined?(klass_name)
+        rescue NameError => e
+          Icalendar.logger.error "NameError trying to find value type for #{component.name} | #{fields[:name]}: #{e.message}"
+          raise e if strict?
         end
       end
       klass
@@ -144,17 +147,23 @@ module Icalendar
 
     private
 
-    def split_property_value(value)
+    def split_property_value_and_delimiter(value)
       parts = []
       start = 0
+      delimiter_char = nil
       value.scan(WRAP_PROPERTY_VALUE_SPLIT_REGEX) do
-        delimiter = Regexp.last_match
-        parts << value[start...delimiter.begin(1)]
-        start = delimiter.end(1)
+        m = Regexp.last_match
+        delimiter_char ||= m[1]
+        parts << value[start...m.begin(1)]
+        start = m.end(1)
       end
       parts << value[start..-1]
       parts.pop while parts.last == ''
-      parts
+      [parts, delimiter_char]
+    end
+
+    def split_property_value(value)
+      split_property_value_and_delimiter(value).first
     end
 
     def component_class
@@ -229,6 +238,21 @@ module Icalendar
     PVALUE_REGEX = %r{#{PVALUE}}.freeze
     PVALUE_GSUB_REGEX = /\A"|"\z/.freeze
     SIMPLE_LINE_NAME_REGEX = /\A[-a-zA-Z0-9]+\z/.freeze
+    NAME_LOOKUP = {
+      'BEGIN' => 'begin', 'END' => 'end', 'VERSION' => 'version', 'PRODID' => 'prodid',
+      'CALSCALE' => 'calscale', 'METHOD' => 'method', 'DTSTART' => 'dtstart',
+      'DTEND' => 'dtend', 'DTSTAMP' => 'dtstamp', 'UID' => 'uid', 'SUMMARY' => 'summary',
+      'DESCRIPTION' => 'description', 'LOCATION' => 'location', 'CATEGORIES' => 'categories',
+      'URL' => 'url', 'ATTENDEE' => 'attendee', 'RRULE' => 'rrule', 'ORGANIZER' => 'organizer',
+      'SEQUENCE' => 'sequence', 'STATUS' => 'status', 'TRANSP' => 'transp',
+      'CREATED' => 'created', 'LAST-MODIFIED' => 'last_modified', 'ACTION' => 'action',
+      'TRIGGER' => 'trigger', 'DURATION' => 'duration', 'REPEAT' => 'repeat',
+      'TZID' => 'tzid', 'TZOFFSETFROM' => 'tzoffsetfrom', 'TZOFFSETTO' => 'tzoffsetto',
+      'TZNAME' => 'tzname', 'COMMENT' => 'comment', 'CONTACT' => 'contact', 'GEO' => 'geo',
+      'RECURRENCE-ID' => 'recurrence_id', 'RELATED-TO' => 'related_to', 'EXDATE' => 'exdate',
+      'RDATE' => 'rdate', 'REQUEST-STATUS' => 'request_status', 'RESOURCES' => 'resources',
+      'CLASS' => 'class', 'PRIORITY' => 'priority'
+    }.freeze
 
     def parse_fields(input)
       debug = ::Logger::DEBUG >= Icalendar.logger.level
@@ -236,13 +260,16 @@ module Icalendar
       unless debug
         colon = input.byteindex(':')
         if colon
-          name = input.byteslice(0, colon)
-          if name.match?(SIMPLE_LINE_NAME_REGEX)
-            name.tr!('A-Z-', 'a-z_')
+          slice = input.byteslice(0, colon)
+          name = NAME_LOOKUP[slice]
+          if name.nil? && slice.match?(SIMPLE_LINE_NAME_REGEX)
+            name = slice.tr('A-Z-', 'a-z_')
+          end
+          if name
             return {
               name: name,
               params: {},
-              value: input.byteslice(colon + 1, input.bytesize - colon - 1)
+              value: input.byteslice((colon + 1)..)
             }
           end
         end

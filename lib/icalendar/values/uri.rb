@@ -14,7 +14,12 @@ module Icalendar
       end
 
       def value_ical
-        value.to_s.gsub(CONTROL_BYTES_REGEX) { |char| "%%%02X" % char.ord }
+        str = value.to_s
+        if str.match?(CONTROL_BYTES_REGEX)
+          str.gsub(CONTROL_BYTES_REGEX) { |char| "%%%02X" % char.ord }
+        else
+          str
+        end
       end
     end
 

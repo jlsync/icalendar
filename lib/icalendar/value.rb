@@ -27,7 +27,12 @@ module Icalendar
 
     def to_ical(default_type)
       ical_param 'value', self.value_type if needs_value_type?(default_type)
-      "#{params_ical}:#{value_ical}"
+      params = params_ical
+      if params
+        "#{params}:#{value_ical}"
+      else
+        ":#{value_ical}"
+      end
     end
 
     def params_ical

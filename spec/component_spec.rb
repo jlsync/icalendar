@@ -41,5 +41,15 @@ describe Icalendar::Component do
         expect(unfolded(ical)).to include "X:#{content}\r\n"
       end
     end
+
+    it 'appends directly to an existing buffer when provided' do
+      buffer = String.new("PRELUDE\r\n")
+      component.append_custom_property 'summary', 'Test Event'
+      result = component.to_ical(buffer)
+
+      expect(result).to be buffer
+      expect(buffer).to start_with "PRELUDE\r\nBEGIN:VTEST\r\n"
+      expect(buffer).to end_with "END:VTEST\r\n"
+    end
   end
 end

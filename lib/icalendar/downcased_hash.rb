@@ -17,13 +17,17 @@ module Icalendar
     end
 
     def [](key)
-      key = key.to_s
-      obj.fetch(key) { obj[key.downcase] }
+      return nil if obj.empty?
+      str = key.is_a?(String) ? key : key.to_s
+      val = obj[str]
+      return val unless val.nil?
+      obj[str.downcase]
     end
 
     def has_key?(key)
-      key = key.to_s
-      obj.key?(key) || obj.key?(key.downcase)
+      return false if obj.empty?
+      str = key.is_a?(String) ? key : key.to_s
+      obj.key?(str) || obj.key?(str.downcase)
     end
     alias_method :include?, :has_key?
     alias_method :member?, :has_key?

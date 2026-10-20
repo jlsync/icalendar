@@ -14,7 +14,7 @@ module Icalendar
 
       def initialize(value, *args)
         # One left-to-right pass keeps unescape the exact inverse of value_ical; \n and \N are newline.
-        value = value.gsub(UNESCAPE_GSUB_REGEX, UNESCAPES)
+        value = value.gsub(UNESCAPE_GSUB_REGEX, UNESCAPES) if value.is_a?(String) && value.include?('\\')
         super value, *args
       end
 
@@ -28,7 +28,11 @@ module Icalendar
       }.freeze
 
       def value_ical
-        value.gsub(VALUE_ICAL_ESCAPE_REGEX, VALUE_ICAL_ESCAPES)
+        if value.match?(VALUE_ICAL_ESCAPE_REGEX)
+          value.gsub(VALUE_ICAL_ESCAPE_REGEX, VALUE_ICAL_ESCAPES)
+        else
+          value
+        end
       end
     end
   end

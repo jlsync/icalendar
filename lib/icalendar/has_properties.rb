@@ -151,7 +151,7 @@ module Icalendar
         attr_reader prop.to_sym
 
         define_method "#{prop}=" do |value|
-          instance_variable_set "@#{prop}", map_property_value(value, klass, false, new_property)
+          instance_variable_set :"@#{prop}", map_property_value(value, klass, false, new_property)
         end
       end
 
@@ -159,7 +159,7 @@ module Icalendar
         self.multiple_properties << prop.to_s
         self.default_property_types[prop.to_s] = klass
         reset_renderable_properties_cache
-        property_var = "@#{prop}"
+        property_var = :"@#{prop}"
 
         define_method "#{prop}=" do |value|
           mapped = map_property_value value, klass, true, new_property

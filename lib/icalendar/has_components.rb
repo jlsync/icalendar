@@ -66,10 +66,11 @@ module Icalendar
         component_var = "@#{components}"
 
         define_method components do
-          if instance_variable_defined? component_var
-            instance_variable_get component_var
-          else
+          value = instance_variable_get component_var
+          if value.nil? && !instance_variable_defined?(component_var)
             instance_variable_set component_var, []
+          else
+            value
           end
         end
 

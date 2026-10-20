@@ -1,0 +1,32 @@
+require 'spec_helper'
+
+describe Icalendar::Component do
+  describe '#to_ical line folding' do
+    subject(:component) { described_class.new 'test' }
+
+    def unfolded(ical)
+      ical.gsub(/\r\n[ \t]/, '')
+    end
+
+    it 'folds long ASCII content into lines of at most 75 octets' do
+      content = 'a' * 500
+      component.append_custom_property 'x-long', content
+
+      ical = component.to_ical
+
+      expect(ical.split("\r\n")).to all(satisfy { |line| line.bytesize <= 75 })
+      expect(unfolded(ical)).to include "X-LONG:#{content}\r\n"
+    end
+
+    it 'folds multi-byte content without splitting characters' do
+      content = '日本語' * 100
+      component.append_custom_property 'x-long', content
+
+      ical = component.to_ical
+
+      expect(ical.split("\r\n")).to all(satisfy { |line| line.bytesize <= 75 })
+      expect(ical).to be_valid_encoding
+      expect(unfolded(ical)).to include "X-LONG:#{content}\r\n"
+    end
+  end
+end

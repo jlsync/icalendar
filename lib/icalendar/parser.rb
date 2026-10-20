@@ -48,7 +48,7 @@ module Icalendar
       components = []
       while (fields = next_fields)
         component = component_class.new
-        if fields[:name] == 'begin' && fields[:value].downcase == component.ical_name.downcase
+        if fields[:name] == 'begin' && fields[:value].casecmp?(component.ical_name)
           components << parse_component(component)
         end
       end
@@ -57,8 +57,11 @@ module Icalendar
 
     def parse_property(component, fields = nil)
       fields = next_fields if fields.nil?
-      prop_name = %w(class method name).include?(fields[:name]) ? "ip_#{fields[:name]}" : fields[:name]
-      multi_property = component.class.multiple_properties.include? prop_name
+      prop_name = case fields[:name]
+                  when 'class', 'method', 'name' then "ip_#{fields[:name]}"
+                  else fields[:name]
+                  end
+      multi_property = component.class.multiple_property? prop_name
       prop_value = wrap_property_value component, fields, multi_property
       begin
         method_name = if multi_property
@@ -105,6 +108,8 @@ module Icalendar
     WRAP_IN_ARRAY_REGEX_2 = /(?<!\\)(?:\\\\)*;/.freeze
 
     def wrap_in_array?(klass, value, multi_property)
+      return false unless value.is_a?(String) && (value.include?(',') || value.include?(';'))
+
       klass.value_type != 'RECUR' &&
         ((multi_property && value =~ WRAP_IN_ARRAY_REGEX_1) || value =~ WRAP_IN_ARRAY_REGEX_2)
     end
@@ -160,18 +165,16 @@ module Icalendar
       @parse_depth_limit ||= 5
     end
 
-    PARSE_COMPONENT_KLASS_NAME_GSUB_REGEX = /\AV/.freeze
-
     def parse_component(component)
       self.parse_depth += 1
       raise ParseError.new("ics file nested too deeply") if parse_depth > parse_depth_limit
       while (fields = next_fields)
         if fields[:name] == 'end'
-          klass_name = fields[:value].gsub(PARSE_COMPONENT_KLASS_NAME_GSUB_REGEX, '').downcase.capitalize
+          klass_name = fields[:value].delete_prefix('V').capitalize
           timezone_store.store(component) if klass_name == 'Timezone'
           break
         elsif fields[:name] == 'begin'
-          klass_name = fields[:value].gsub(PARSE_COMPONENT_KLASS_NAME_GSUB_REGEX, '').gsub("-", "_").downcase.capitalize
+          klass_name = fields[:value].delete_prefix('V').tr('-', '_').capitalize
           Icalendar.logger.debug "Adding component #{klass_name}"
           if Object.const_defined? "Icalendar::#{klass_name}"
             component.add_component parse_component(Object.const_get("Icalendar::#{klass_name}").new)
@@ -192,16 +195,19 @@ module Icalendar
       @data = source.gets and @data.chomp!
     end
 
-    NEXT_FIELDS_TAB_REGEX = /\A[ \t].+\z/.freeze
     NEXT_FIELDS_WHITESPACE_REGEX = /\A\s*\z/.freeze
 
     def next_fields
       line = @data or return nil
       loop do
         read_in_data
-        if @data =~ NEXT_FIELDS_TAB_REGEX
-          line << @data[1, @data.size]
-        elsif @data !~ NEXT_FIELDS_WHITESPACE_REGEX
+        if @data.nil?
+          break
+        elsif @data.bytesize > 1 && @data.start_with?(' ', "\t")
+          line << @data[1..]
+        elsif @data.empty? || @data.match?(NEXT_FIELDS_WHITESPACE_REGEX)
+          next
+        else
           break
         end
       end
@@ -221,8 +227,26 @@ module Icalendar
     PARAM_REGEX = %r{#{PARAM}}.freeze
     PVALUE_REGEX = %r{#{PVALUE}}.freeze
     PVALUE_GSUB_REGEX = /\A"|"\z/.freeze
+    SIMPLE_LINE_NAME_REGEX = /\A[-a-zA-Z0-9]+\z/.freeze
 
     def parse_fields(input)
+      debug = ::Logger::DEBUG >= Icalendar.logger.level
+
+      unless debug
+        colon = input.index(':')
+        if colon
+          name = input.byteslice(0, colon)
+          if name.match?(SIMPLE_LINE_NAME_REGEX)
+            name.tr!('A-Z-', 'a-z_')
+            return {
+              name: name,
+              params: {},
+              value: input.byteslice(colon + 1, input.bytesize - colon - 1)
+            }
+          end
+        end
+      end
+
       if parts = LINE_REGEX.match(input)
         value = parts[:value]
       else
@@ -245,11 +269,13 @@ module Icalendar
       end
       # Building the string to send to the logger is expensive.
       # Only do it if the logger is at the right log level.
-      if ::Logger::DEBUG >= Icalendar.logger.level
+      if debug
         Icalendar.logger.debug "Found fields: #{parts.inspect} with params: #{params.inspect}"
       end
+      name = parts[:name]
+      name.tr!('A-Z-', 'a-z_')
       {
-        name: parts[:name].downcase.gsub('-', '_'),
+        name: name,
         params: params,
         value: value
       }

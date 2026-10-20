@@ -8,16 +8,24 @@ module Icalendar
 
   class Value < ::SimpleDelegator
 
-    attr_accessor :ical_params, :context
+    attr_writer :ical_params, :context
 
     def initialize(value, params = {}, context = {})
-      @ical_params = Icalendar::DowncasedHash(params)
-      @context = Icalendar::DowncasedHash(context)
+      @ical_params = Icalendar::DowncasedHash(params) unless params.empty? && !params.is_a?(Icalendar::DowncasedHash)
+      @context = Icalendar::DowncasedHash(context) unless context.empty? && !context.is_a?(Icalendar::DowncasedHash)
       super value
     end
 
+    def ical_params
+      @ical_params ||= Icalendar::DowncasedHash.new({})
+    end
+
+    def context
+      @context ||= Icalendar::DowncasedHash.new({})
+    end
+
     def ical_param(key, value)
-      @ical_params[key] = value
+      ical_params[key] = value
       @params_cached = false
     end
 
@@ -72,7 +80,7 @@ module Icalendar
       else
         param_value = escape_param_value param_value
       end
-      "#{name.to_s.gsub('_', '-').upcase}=#{param_value}"
+      "#{name.to_s.tr('_', '-').upcase}=#{param_value}"
     end
 
     ESCAPE_PARAM_VALUE_REGEX = /[;:,]/.freeze

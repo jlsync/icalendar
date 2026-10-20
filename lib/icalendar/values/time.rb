@@ -23,10 +23,11 @@ module Icalendar
       end
 
       def value_ical
+        formatted = value.strftime FORMAT
         if tz_utc
-          "#{strftime FORMAT}Z"
+          "#{formatted}Z"
         else
-          strftime FORMAT
+          formatted
         end
       end
 

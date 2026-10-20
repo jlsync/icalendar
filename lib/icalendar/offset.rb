@@ -7,13 +7,11 @@ module Icalendar
 
       tzid = Array(params['tzid']).first
 
-      [
-        Icalendar::Offset::ActiveSupportExact,
-        Icalendar::Offset::TimeZoneStore,
-        Icalendar::Offset::WindowsToIana,
-        Icalendar::Offset::ActiveSupportPartial,
-        Icalendar::Offset::Null
-      ].lazy.map { |klass| klass.new(tzid, value, timezone_store) }.detect(&:valid?)
+      TYPES.each do |klass|
+        offset = klass.new(tzid, value, timezone_store)
+        return offset if offset.valid?
+      end
+      nil
     end
 
     def initialize(tzid, value, timezone_store)
@@ -42,3 +40,15 @@ require_relative 'offset/active_support_partial'
 require_relative 'offset/null'
 require_relative 'offset/time_zone_store'
 require_relative 'offset/windows_to_iana'
+
+module Icalendar
+  class Offset
+    TYPES = [
+      ActiveSupportExact,
+      TimeZoneStore,
+      WindowsToIana,
+      ActiveSupportPartial,
+      Null
+    ].freeze
+  end
+end

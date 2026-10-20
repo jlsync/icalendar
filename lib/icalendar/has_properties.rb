@@ -91,13 +91,11 @@ module Icalendar
       end
 
       def single_property?(prop)
-        @single_property_lookup ||= single_properties.each_with_object({}) { |name, lookup| lookup[name] = true }
-        @single_property_lookup.key?(prop)
+        single_properties.include?(prop)
       end
 
       def multiple_property?(prop)
-        @multiple_property_lookup ||= multiple_properties.each_with_object({}) { |name, lookup| lookup[name] = true }
-        @multiple_property_lookup.key?(prop)
+        multiple_properties.include?(prop)
       end
 
       def required_properties
@@ -147,7 +145,6 @@ module Icalendar
 
       def single_property(prop, klass, new_property)
         self.single_properties << prop.to_s
-        @single_property_lookup = nil
         self.default_property_types[prop.to_s] = klass
         reset_renderable_properties_cache
 
@@ -160,7 +157,6 @@ module Icalendar
 
       def multi_property(prop, klass, new_property, single_line = false)
         self.multiple_properties << prop.to_s
-        @multiple_property_lookup = nil
         self.default_property_types[prop.to_s] = klass
         reset_renderable_properties_cache
         property_var = "@#{prop}"

@@ -30,6 +30,26 @@ describe Icalendar::Values::Text do
     end
   end
 
+  describe 'frozen values' do
+    subject { described_class.new('x').freeze }
+
+    it 'can be read and compared without raising' do
+      expect(subject.ical_params).to be_empty
+      expect(subject.context).to be_empty
+      expect(subject).to eq described_class.new('x')
+    end
+  end
+
+  describe 'invalid params' do
+    it 'rejects nil params' do
+      expect { described_class.new('x', nil) }.to raise_error ArgumentError
+    end
+
+    it 'rejects non-Hash params' do
+      expect { described_class.new('x', []) }.to raise_error ArgumentError
+    end
+  end
+
   describe 'unescape is the exact inverse of value_ical' do
     bs = "\\"
     {

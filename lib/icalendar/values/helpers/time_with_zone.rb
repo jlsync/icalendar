@@ -37,9 +37,10 @@ module Icalendar
 
         def __getobj__
           orig_value = super
-          return orig_value if set_offset? || ical_params.empty? || ical_params['tzid'].nil?
+          params = ical_params
+          return orig_value if set_offset? || params.nil? || params.empty? || params['tzid'].nil?
 
-          new_value = Icalendar::Offset.build(orig_value, ical_params, timezone_store)&.normalized_value
+          new_value = Icalendar::Offset.build(orig_value, params, timezone_store)&.normalized_value
           __setobj__(new_value) unless new_value.nil?
           new_value || orig_value
         end

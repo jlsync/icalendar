@@ -28,5 +28,18 @@ describe Icalendar::Component do
       expect(ical).to be_valid_encoding
       expect(unfolded(ical)).to include "X-LONG:#{content}\r\n"
     end
+
+    it 'handles the 75-octet folding boundary' do
+      [73, 74].each do |content_length|
+        component = described_class.new 'test'
+        content = 'a' * content_length
+        component.append_custom_property 'x', content
+
+        ical = component.to_ical
+
+        expect(ical.split("\r\n")).to all(satisfy { |line| line.bytesize <= 75 })
+        expect(unfolded(ical)).to include "X:#{content}\r\n"
+      end
+    end
   end
 end

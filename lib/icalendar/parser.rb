@@ -108,6 +108,7 @@ module Icalendar
     WRAP_IN_ARRAY_REGEX_2 = /(?<!\\)(?:\\\\)*;/.freeze
 
     def wrap_in_array?(klass, value, multi_property)
+      # Both wrap regexes require a delimiter, so skip them when there is none.
       return false unless value.is_a?(String) && (value.include?(',') || value.include?(';'))
 
       klass.value_type != 'RECUR' &&
@@ -233,7 +234,7 @@ module Icalendar
       debug = ::Logger::DEBUG >= Icalendar.logger.level
 
       unless debug
-        colon = input.index(':')
+        colon = input.byteindex(':')
         if colon
           name = input.byteslice(0, colon)
           if name.match?(SIMPLE_LINE_NAME_REGEX)

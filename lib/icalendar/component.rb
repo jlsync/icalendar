@@ -101,7 +101,7 @@ module Icalendar
         return fold_ascii(long_line, indent)
       end
 
-      chars = long_line.scan(ICAL_FOLD_LONG_LINE_SCAN_REGEX) # split in graphenes
+      chars = long_line.scan(ICAL_FOLD_LONG_LINE_SCAN_REGEX) # split in graphemes
       folded = [String.new]
       bytes = 0
       indent_bytesize = indent.bytesize

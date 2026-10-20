@@ -3,7 +3,7 @@
 module Icalendar
   module Values
     class Text < Value
-      UNESCAPE_GSUB_REGEX = /\\([\\,;nN])/.freeze
+      UNESCAPE_GSUB_REGEX = /\\[\\,;nN]/.freeze
       UNESCAPES = {
         '\\\\' => '\\',
         '\\,' => ',',
@@ -28,9 +28,7 @@ module Icalendar
       }.freeze
 
       def value_ical
-        v = value.dup
-        v.gsub!(VALUE_ICAL_ESCAPE_REGEX, VALUE_ICAL_ESCAPES)
-        v
+        value.gsub(VALUE_ICAL_ESCAPE_REGEX, VALUE_ICAL_ESCAPES)
       end
     end
   end

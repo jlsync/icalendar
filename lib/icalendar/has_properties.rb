@@ -91,11 +91,11 @@ module Icalendar
       end
 
       def single_property?(prop)
-        single_properties.include?(prop)
+        single_properties.include?(prop.to_s)
       end
 
       def multiple_property?(prop)
-        multiple_properties.include?(prop)
+        multiple_properties.include?(prop.to_s)
       end
 
       def required_properties

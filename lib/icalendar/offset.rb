@@ -32,6 +32,17 @@ module Icalendar
       defined?(ActiveSupport::TimeZone) &&
         defined?(Icalendar::Values::Helpers::ActiveSupportTimeWithZoneAdapter)
     end
+
+    # Whether a message at +severity+ should be built and logged. Prefer the logger's own
+    # predicate (::Logger#debug? / #info?), fall back to a numeric #level, and otherwise log,
+    # so loggers that only implement the positional severity methods behave as before.
+    def log_enabled?(severity, predicate)
+      logger = Icalendar.logger
+      return logger.public_send(predicate) if logger.respond_to?(predicate)
+
+      level = logger.level if logger.respond_to?(:level)
+      level.is_a?(Integer) ? severity >= level : true
+    end
   end
 end
 

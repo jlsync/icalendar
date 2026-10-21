@@ -9,7 +9,7 @@ module Icalendar
 
       def normalized_value
         # plan d - just ignore the tzid
-        Icalendar.logger.info("Ignoring timezone #{tzid} for time #{value}")
+        Icalendar.logger.info("Ignoring timezone #{tzid} for time #{value}") if log_enabled?(::Logger::INFO, :info?)
         nil
       end
     end

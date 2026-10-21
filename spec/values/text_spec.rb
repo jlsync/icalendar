@@ -28,6 +28,36 @@ describe Icalendar::Values::Text do
         expect(subject.value).to eq unescaped
       end
     end
+
+    context 'given a value with nothing to unescape' do
+      let(:value) { String.new('plain text') }
+
+      it 'stores a copy rather than the original string' do
+        text = subject
+        value << ' changed'
+        expect(text.value).to eq 'plain text'
+      end
+
+      it 'stores an unfrozen copy of a frozen string' do
+        text = described_class.new('frozen text'.freeze)
+        expect(text.value).to eq 'frozen text'
+        expect(text.value).not_to be_frozen
+      end
+
+      it 'still honours a gsub override on a String subclass' do
+        klass = Class.new(String) do
+          def gsub(*args)
+            super.gsub('secret', '[redacted]')
+          end
+        end
+        expect(described_class.new(klass.new('a secret')).value).to eq 'a [redacted]'
+      end
+
+      it 'rejects an invalid byte sequence in the constructor' do
+        invalid = "caf\xE9".b.force_encoding(Encoding::UTF_8)
+        expect { described_class.new(invalid) }.to raise_error ArgumentError, /invalid byte sequence/
+      end
+    end
   end
 
   describe 'frozen values' do

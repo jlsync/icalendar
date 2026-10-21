@@ -17,12 +17,31 @@ describe Icalendar::DowncasedHash do
       subject['foo'] = 'bar'
       expect(subject['FOO']).to eq 'bar'
     end
+
+    it 'returns nil for any key when empty' do
+      empty = described_class.new({})
+      expect(empty['foo']).to be_nil
+      expect(empty[:foo]).to be_nil
+    end
+
+    it 'accepts Symbol keys in any case' do
+      expect(subject[:hello]).to eq 'world'
+      expect(subject[:HELLO]).to eq 'world'
+      expect(subject.has_key? :hello).to be true
+      expect(subject.has_key? :HELLO).to be true
+    end
   end
 
   describe '#has_key?' do
     it 'correctly identifies keys in the hash' do
       expect(subject.has_key? 'hello').to be true
       expect(subject.has_key? 'HELLO').to be true
+    end
+
+    it 'is false for any key when empty' do
+      empty = described_class.new({})
+      expect(empty.has_key? 'hello').to be false
+      expect(empty.has_key? :hello).to be false
     end
   end
 

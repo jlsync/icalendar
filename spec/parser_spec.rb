@@ -146,9 +146,14 @@ describe Icalendar::Parser do
       end
     end
 
+    # An ASCII-only source so these examples do not depend on the process locale.
+    logging_source = "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:test\r\n" \
+      "BEGIN:VEVENT\r\nUID:1\r\nDTSTAMP:20240101T000000Z\r\nDTSTART:20240102T090000Z\r\n" \
+      "SUMMARY:logged\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n"
+
     context 'with a logger at debug level' do
       let(:sink) { StringIO.new }
-      let(:source) { File.read File.join(File.dirname(__FILE__), 'fixtures', 'single_event.ics') }
+      let(:source) { logging_source }
 
       around do |example|
         original = Icalendar.logger
@@ -182,7 +187,7 @@ describe Icalendar::Parser do
           end
         end
       end
-      let(:source) { File.read File.join(File.dirname(__FILE__), 'fixtures', 'single_event.ics') }
+      let(:source) { logging_source }
 
       around do |example|
         original = Icalendar.logger
@@ -202,6 +207,42 @@ describe Icalendar::Parser do
         Icalendar.logger = logger_class.new ::Logger::WARN
         expect(subject.parse.first.events.size).to eq 1
         expect(Icalendar.logger.messages).to be_empty
+      end
+
+      it 'falls back to a numeric level when the logger has no severity predicates' do
+        predicate_free = Class.new(logger_class) do
+          %w[debug? info? warn? error? fatal?].each { |predicate| undef_method predicate }
+        end
+
+        Icalendar.logger = predicate_free.new ::Logger::DEBUG
+        expect(Icalendar.logger).not_to respond_to(:debug?)
+        subject.parse
+        expect(Icalendar.logger.messages).to include 'Adding component Event'
+
+        Icalendar.logger = predicate_free.new ::Logger::WARN
+        described_class.new(source, false).parse
+        expect(Icalendar.logger.messages).to be_empty
+      end
+
+      it 'parses with a bare logger that has neither predicates nor a numeric level' do
+        bare = Class.new do
+          attr_reader :messages
+
+          def initialize
+            @messages = []
+          end
+
+          def level
+            :debug
+          end
+
+          %w[debug info warn error fatal].each do |severity|
+            define_method(severity) { |message| @messages << message }
+          end
+        end
+        Icalendar.logger = bare.new
+        expect(subject.parse.first.events.first.summary.value).to eq 'logged'
+        expect(Icalendar.logger.messages).to include 'Adding component Event'
       end
     end
   end

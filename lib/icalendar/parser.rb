@@ -142,14 +142,18 @@ module Icalendar
       @verbose
     end
 
-    # Skip building the message only when the logger itself reports debug is off; a logger
-    # without #debug? is called exactly as before.
+    private
+
+    # Whether debug messages should be built and logged. Prefer the logger's own #debug?,
+    # fall back to a numeric #level, and otherwise log, so loggers that only implement the
+    # positional severity methods behave as before.
     def debug_logging?
       logger = Icalendar.logger
-      !logger.respond_to?(:debug?) || logger.debug?
-    end
+      return logger.debug? if logger.respond_to?(:debug?)
 
-    private
+      level = logger.level if logger.respond_to?(:level)
+      level.is_a?(Integer) ? ::Logger::DEBUG >= level : true
+    end
 
     def split_property_value(value)
       parts = []
@@ -238,7 +242,7 @@ module Icalendar
     SIMPLE_LINE_NAME_REGEX = /\A[-a-zA-Z0-9]+\z/.freeze
 
     def parse_fields(input)
-      debug = ::Logger::DEBUG >= Icalendar.logger.level
+      debug = debug_logging?
 
       unless debug
         colon = input.byteindex(':')

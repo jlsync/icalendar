@@ -125,7 +125,7 @@ module Icalendar
       end
 
       def normalized_value
-        Icalendar.logger.debug("Plan a - parsing #{value}/#{tzid} as ActiveSupport::TimeWithZone") if log_enabled?(:debug?)
+        Icalendar.logger.debug("Plan a - parsing #{value}/#{tzid} as ActiveSupport::TimeWithZone") if log_enabled?(::Logger::DEBUG, :debug?)
         # plan a - use ActiveSupport::TimeWithZone
         Icalendar::Values::Helpers::ActiveSupportTimeWithZoneAdapter.new(nil, tz, value)
       end

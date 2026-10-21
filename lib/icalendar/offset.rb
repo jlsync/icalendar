@@ -33,11 +33,15 @@ module Icalendar
         defined?(Icalendar::Values::Helpers::ActiveSupportTimeWithZoneAdapter)
     end
 
-    # Skip building a log message only when the logger itself reports the severity is off
-    # (::Logger#debug? / #info?). Loggers without those predicates are called exactly as before.
-    def log_enabled?(predicate)
+    # Whether a message at +severity+ should be built and logged. Prefer the logger's own
+    # predicate (::Logger#debug? / #info?), fall back to a numeric #level, and otherwise log,
+    # so loggers that only implement the positional severity methods behave as before.
+    def log_enabled?(severity, predicate)
       logger = Icalendar.logger
-      !logger.respond_to?(predicate) || logger.public_send(predicate)
+      return logger.public_send(predicate) if logger.respond_to?(predicate)
+
+      level = logger.level if logger.respond_to?(:level)
+      level.is_a?(Integer) ? severity >= level : true
     end
   end
 end

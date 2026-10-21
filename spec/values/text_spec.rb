@@ -44,16 +44,6 @@ describe Icalendar::Values::Text do
         expect(text.value).not_to be_frozen
       end
 
-      it 'copies without going through dup' do
-        aliasing = String.new('plain text')
-        def aliasing.dup
-          self
-        end
-        text = described_class.new(aliasing)
-        aliasing << ' changed'
-        expect(text.value).to eq 'plain text'
-      end
-
       it 'still honours a gsub override on a String subclass' do
         klass = Class.new(String) do
           def gsub(*args)

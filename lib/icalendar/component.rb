@@ -176,7 +176,7 @@ module Icalendar
 
     def append_ical_component(buffer, component)
       serializer = component.method(:to_ical)
-      if serializer.owner == Icalendar::Component || (first = serializer.parameters.first; first && (first.last == :buffer || first.last == :buf))
+      if serializer.owner == Icalendar::Component || (first = serializer.parameters.first; first && (first[0] == :req || first[0] == :opt) && (first[1] == :buffer || first[1] == :buf))
         component.to_ical(buffer)
       else
         buffer << component.to_ical

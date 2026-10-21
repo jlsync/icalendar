@@ -98,5 +98,17 @@ describe Icalendar::Component do
 
       expect(cal.to_ical).to include "BEGIN:VOPTIONS\r\nX-NAME:Options\r\nEND:VOPTIONS\r\n"
     end
+
+    it 'supports nested components with keyword buffer: nil to_ical overrides' do
+      subclass = Class.new(described_class) do
+        def to_ical(buffer: nil)
+          "BEGIN:VBUFFERKW\r\nX-NAME:BufferKw\r\nEND:VBUFFERKW\r\n"
+        end
+      end
+      cal = Icalendar::Calendar.new
+      cal.add_custom_component 'bufferkw', subclass.new('bufferkw')
+
+      expect(cal.to_ical).to include "BEGIN:VBUFFERKW\r\nX-NAME:BufferKw\r\nEND:VBUFFERKW\r\n"
+    end
   end
 end

@@ -23,6 +23,13 @@ describe Icalendar::DowncasedHash do
       expect(empty['foo']).to be_nil
       expect(empty[:foo]).to be_nil
     end
+
+    it 'accepts Symbol keys in any case' do
+      expect(subject[:hello]).to eq 'world'
+      expect(subject[:HELLO]).to eq 'world'
+      expect(subject.has_key? :hello).to be true
+      expect(subject.has_key? :HELLO).to be true
+    end
   end
 
   describe '#has_key?' do

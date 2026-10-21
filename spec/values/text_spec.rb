@@ -38,6 +38,12 @@ describe Icalendar::Values::Text do
         expect(text.value).to eq 'plain text'
       end
 
+      it 'stores an unfrozen copy of a frozen string' do
+        text = described_class.new('frozen text'.freeze)
+        expect(text.value).to eq 'frozen text'
+        expect(text.value).not_to be_frozen
+      end
+
       it 'still honours a gsub override on a String subclass' do
         klass = Class.new(String) do
           def gsub(*args)

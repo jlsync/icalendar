@@ -142,6 +142,13 @@ module Icalendar
       @verbose
     end
 
+    # Skip building the message only when the logger itself reports debug is off; a logger
+    # without #debug? is called exactly as before.
+    def debug_logging?
+      logger = Icalendar.logger
+      !logger.respond_to?(:debug?) || logger.debug?
+    end
+
     private
 
     def split_property_value(value)
@@ -176,7 +183,7 @@ module Icalendar
           break
         elsif fields[:name] == 'begin'
           klass_name = fields[:value].delete_prefix('V').tr('-', '_').capitalize
-          Icalendar.logger.debug "Adding component #{klass_name}" if ::Logger::DEBUG >= Icalendar.logger.level
+          Icalendar.logger.debug "Adding component #{klass_name}" if debug_logging?
           if Object.const_defined? "Icalendar::#{klass_name}"
             component.add_component parse_component(Object.const_get("Icalendar::#{klass_name}").new)
           elsif Object.const_defined? "Icalendar::Timezone::#{klass_name}"

@@ -11,9 +11,7 @@ module Icalendar
         # plan b - use definition from provided `VTIMEZONE`
         offset = tz_info.offset_for_local(value).to_s
 
-        if ::Logger::DEBUG >= Icalendar.logger.level
-          Icalendar.logger.debug("Plan b - parsing #{value} with offset: #{offset}")
-        end
+        Icalendar.logger.debug("Plan b - parsing #{value} with offset: #{offset}") if log_enabled?(:debug?)
         if value.respond_to?(:change)
           value.change offset: offset
         else

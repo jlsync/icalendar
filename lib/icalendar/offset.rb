@@ -32,6 +32,13 @@ module Icalendar
       defined?(ActiveSupport::TimeZone) &&
         defined?(Icalendar::Values::Helpers::ActiveSupportTimeWithZoneAdapter)
     end
+
+    # Skip building a log message only when the logger itself reports the severity is off
+    # (::Logger#debug? / #info?). Loggers without those predicates are called exactly as before.
+    def log_enabled?(predicate)
+      logger = Icalendar.logger
+      !logger.respond_to?(predicate) || logger.public_send(predicate)
+    end
   end
 end
 

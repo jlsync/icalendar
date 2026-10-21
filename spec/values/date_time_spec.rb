@@ -82,6 +82,40 @@ describe Icalendar::Values::DateTime do
     end
   end
 
+  context 'with a bare logger that only has positional severity methods' do
+    let(:logger_class) do
+      Class.new do
+        attr_reader :messages
+
+        def initialize
+          @messages = []
+        end
+
+        # Some logging libraries report the level as a Symbol rather than an Integer.
+        def level
+          :debug
+        end
+
+        %w[debug info warn error fatal].each do |severity|
+          define_method(severity) { |message| @messages << message }
+        end
+      end
+    end
+
+    around do |example|
+      original = Icalendar.logger
+      Icalendar.logger = logger_class.new
+      example.run
+    ensure
+      Icalendar.logger = original
+    end
+
+    it 'resolves a tzid without needing #debug? or a numeric #level, and still logs' do
+      expect { described_class.new('20140209T160652', 'tzid' => 'America/Denver') }.not_to raise_error
+      expect(Icalendar.logger.messages.grep(/parsing|Ignoring timezone/)).not_to be_empty
+    end
+  end
+
   context 'common tests' do
     it 'does not add any tzid parameter to output' do
       expect(subject.to_ical described_class).to eq ":#{value}"

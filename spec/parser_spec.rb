@@ -176,8 +176,9 @@ describe Icalendar::Parser do
             @messages = []
           end
 
-          %w[debug info warn error fatal].each do |severity|
+          %w[debug info warn error fatal].each_with_index do |severity, index|
             define_method(severity) { |message| @messages << message }
+            define_method("#{severity}?") { index >= @level }
           end
         end
       end

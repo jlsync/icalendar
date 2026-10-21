@@ -15,11 +15,13 @@ module Icalendar
       def initialize(value, *args)
         # One left-to-right pass keeps unescape the exact inverse of value_ical; \n and \N are newline.
         # A plain, validly encoded String with no backslash has nothing to unescape, so skip the
-        # regex pass and copy it instead; the copy keeps the stored string isolated from the caller
-        # just as gsub did. Anything else (String subclasses that may override gsub, other objects,
-        # invalid byte sequences) takes the original path so behaviour and errors are unchanged.
+        # regex pass and take a fresh copy with String.new (not dup, which is overridable); the
+        # copy keeps the stored string isolated from the caller just as gsub did. Anything else
+        # (String subclasses that may override gsub, other objects, invalid byte sequences) takes
+        # the original path so behaviour and errors are unchanged. The fast path assumes the stock
+        # String#include? and #valid_encoding?, as the rest of the gem assumes stock core methods.
         value = if value.instance_of?(::String) && value.valid_encoding? && !value.include?('\\')
-          value.dup
+          String.new(value)
         else
           value.gsub(UNESCAPE_GSUB_REGEX, UNESCAPES)
         end

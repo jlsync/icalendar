@@ -201,5 +201,17 @@ describe Icalendar::Component do
 
       expect { cal.to_ical }.to raise_error(NameError, /NonExistentConstantForTest/)
     end
+
+    it 'supports nested components with a required positional argument named output' do
+      subclass = Class.new(described_class) do
+        def to_ical(output)
+          output << "BEGIN:VOUTPUT\r\nX-NAME:Output\r\nEND:VOUTPUT\r\n"
+        end
+      end
+      cal = Icalendar::Calendar.new
+      cal.add_custom_component 'output', subclass.new('output')
+
+      expect(cal.to_ical).to include "BEGIN:VOUTPUT\r\nX-NAME:Output\r\nEND:VOUTPUT\r\n"
+    end
   end
 end

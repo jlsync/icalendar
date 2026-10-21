@@ -18,7 +18,7 @@ module Icalendar
         if str.match?(CONTROL_BYTES_REGEX)
           str.gsub(CONTROL_BYTES_REGEX) { |char| "%%%02X" % char.ord }
         else
-          str
+          str.dup
         end
       end
     end

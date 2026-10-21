@@ -44,7 +44,7 @@ module Icalendar
     private
 
     def append_ical_property(buffer, wire_name, value, default_type)
-      if value.is_a?(Icalendar::Value)
+      if value.is_a?(Icalendar::Value) && value.class.instance_method(:to_ical).owner == Icalendar::Value
         value.ical_param('value', value.value_type) if value.send(:needs_value_type?, default_type)
         params = value.params_ical
         val = value.value_ical

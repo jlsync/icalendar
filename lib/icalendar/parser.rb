@@ -65,9 +65,9 @@ module Icalendar
       prop_value = wrap_property_value component, fields, multi_property
       begin
         method_name = if multi_property
-          APPEND_METHODS[prop_name] ||= :"append_#{prop_name}"
+          KNOWN_APPEND_METHODS[prop_name] || "append_#{prop_name}"
         else
-          SETTER_METHODS[prop_name] ||= :"#{prop_name}="
+          KNOWN_SETTER_METHODS[prop_name] || "#{prop_name}="
         end
         component.send method_name, prop_value
       rescue NoMethodError => nme
@@ -81,24 +81,20 @@ module Icalendar
       end
     end
 
-    SETTER_METHODS = {}
-    APPEND_METHODS = {}
-
     # An even number of backslashes leaves the following delimiter unescaped.
     WRAP_PROPERTY_VALUE_SPLIT_REGEX = /(?<!\\)(?:\\\\)*([;,])/.freeze
 
     def wrap_property_value(component, fields, multi_property)
       klass = get_wrapper_class component, fields
-      tz_context = (@timezone_context ||= Icalendar::DowncasedHash.new(timezone_store: timezone_store))
       if wrap_in_array? klass, fields[:value], multi_property
         parts, delimiter = split_property_value_and_delimiter(fields[:value])
         Icalendar::Values::Helpers::Array.new parts,
                                      klass,
                                      fields[:params],
                                      delimiter: delimiter,
-                                     context: tz_context
+                                     timezone_store: timezone_store
       else
-        klass.new fields[:value], fields[:params], tz_context
+        klass.new fields[:value], fields[:params], timezone_store: timezone_store
       end
     rescue Icalendar::Values::DateTime::FormatError => fe
       raise fe if strict?
@@ -253,6 +249,8 @@ module Icalendar
       'RDATE' => 'rdate', 'REQUEST-STATUS' => 'request_status', 'RESOURCES' => 'resources',
       'CLASS' => 'class', 'PRIORITY' => 'priority'
     }.freeze
+    KNOWN_SETTER_METHODS = NAME_LOOKUP.values.to_h { |n| [n, :"#{n}="] }.freeze
+    KNOWN_APPEND_METHODS = NAME_LOOKUP.values.to_h { |n| [n, :"append_#{n}"] }.freeze
 
     def parse_fields(input)
       debug = ::Logger::DEBUG >= Icalendar.logger.level

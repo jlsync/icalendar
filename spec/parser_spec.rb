@@ -193,4 +193,38 @@ describe Icalendar::Parser do
       expect(new_cal).to be_a Icalendar::Calendar
     end
   end
+
+  describe 'multi-value property with custom timezone store' do
+    let(:ics) do
+      "BEGIN:VCALENDAR\r\n" \
+      "VERSION:2.0\r\n" \
+      "PRODID:-//Example Corp.//EN\r\n" \
+      "BEGIN:VTIMEZONE\r\n" \
+      "TZID:Custom-Zone\r\n" \
+      "BEGIN:STANDARD\r\n" \
+      "DTSTART:19700101T000000\r\n" \
+      "TZOFFSETFROM:+0200\r\n" \
+      "TZOFFSETTO:+0200\r\n" \
+      "END:STANDARD\r\n" \
+      "END:VTIMEZONE\r\n" \
+      "BEGIN:VEVENT\r\n" \
+      "UID:12345\r\n" \
+      "DTSTAMP:20240101T000000Z\r\n" \
+      "DTSTART;TZID=Custom-Zone:20240101T120000\r\n" \
+      "RDATE;TZID=Custom-Zone:20240102T120000,20240103T120000\r\n" \
+      "END:VEVENT\r\n" \
+      "END:VCALENDAR\r\n"
+    end
+
+    it 'passes timezone_store to each item in the array' do
+      cal = Icalendar::Calendar.parse(ics).first
+      event = cal.events.first
+      rdate = event.rdate.first
+      expect(rdate).to be_a Icalendar::Values::Helpers::Array
+      rdate.value.each do |child|
+        expect(child.timezone_store).not_to be_nil
+        expect(child.timezone_store.retrieve('Custom-Zone')).not_to be_nil
+      end
+    end
+  end
 end

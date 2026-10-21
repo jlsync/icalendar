@@ -189,5 +189,17 @@ describe Icalendar::Component do
 
       expect(component.to_ical).to include "PRIV;KEY=val:secret\r\n"
     end
+
+    it 'does not rescue NameError raised inside a component to_ical implementation' do
+      broken_class = Class.new(described_class) do
+        def to_ical
+          NonExistentConstantForTest
+        end
+      end
+      cal = Icalendar::Calendar.new
+      cal.add_custom_component 'broken', broken_class.new('broken')
+
+      expect { cal.to_ical }.to raise_error(NameError, /NonExistentConstantForTest/)
+    end
   end
 end

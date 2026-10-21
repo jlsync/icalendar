@@ -176,8 +176,15 @@ module Icalendar
     end
 
     def append_ical_component(buffer, component)
-      serializer = component.method(:to_ical)
-      if serializer.owner == Icalendar::Component
+      serializer = begin
+        component.method(:to_ical)
+      rescue NameError
+        nil
+      end
+
+      if serializer.nil?
+        buffer << component.to_ical
+      elsif serializer.owner == Icalendar::Component
         component.to_ical(buffer)
       elsif (first = serializer.parameters.first; first && (first[0] == :req || first[0] == :opt) && (first[1] == :buffer || first[1] == :buf))
         size_before = buffer.bytesize
@@ -186,8 +193,6 @@ module Icalendar
       else
         buffer << component.to_ical
       end
-    rescue NameError
-      buffer << component.to_ical
     end
 
     class << self

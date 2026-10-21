@@ -1,5 +1,6 @@
 ## Unreleased
 - Improve parsing and ICS generation performance with no change to generated output or the public API.
+  - `Component#to_ical` optionally accepts a destination buffer string to append into, significantly reducing allocations when generating large calendars. Nested component subclasses and custom overrides that accept a positional buffer parameter receive the shared buffer; legacy overrides without buffer parameters continue to be called with zero arguments and have their return values appended.
 
 ## 2.14.0 - 2026-10-20
 - Require Ruby 3.4 or newer and test against Ruby 3.4 and 4.0.

@@ -17,7 +17,7 @@ module Icalendar
         value = if value.is_a?(String)
           value.include?('\\') ? value.gsub(UNESCAPE_GSUB_REGEX, UNESCAPES) : value.dup
         else
-          value
+          value.gsub(UNESCAPE_GSUB_REGEX, UNESCAPES)
         end
         super value, *args
       end
@@ -32,10 +32,14 @@ module Icalendar
       }.freeze
 
       def value_ical
-        if value.match?(VALUE_ICAL_ESCAPE_REGEX)
-          value.gsub(VALUE_ICAL_ESCAPE_REGEX, VALUE_ICAL_ESCAPES)
+        if value.is_a?(String)
+          if value.match?(VALUE_ICAL_ESCAPE_REGEX)
+            value.gsub(VALUE_ICAL_ESCAPE_REGEX, VALUE_ICAL_ESCAPES)
+          else
+            value.dup
+          end
         else
-          value.dup
+          value.gsub(VALUE_ICAL_ESCAPE_REGEX, VALUE_ICAL_ESCAPES)
         end
       end
     end

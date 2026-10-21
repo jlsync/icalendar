@@ -63,6 +63,22 @@ describe Icalendar::Component do
       expect(component.to_ical).to include "SUMMARY:OVERRIDDEN\r\n"
     end
 
+    it 'supports Value subclasses whose value_ical returns a non-String' do
+      int_value_class = Class.new(Icalendar::Value) do
+        def self.value_type
+          'INTEGER'
+        end
+
+        def value_ical
+          42
+        end
+      end
+      component = described_class.new 'test'
+      component.append_custom_property 'count', int_value_class.new(42)
+
+      expect(component.to_ical).to include "COUNT;VALUE=INTEGER:42\r\n"
+    end
+
     it 'supports nested components with a zero-argument to_ical override' do
       subclass = Class.new(described_class) do
         def to_ical

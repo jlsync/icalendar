@@ -31,6 +31,7 @@ module Icalendar
 
     COLON = ':'
     CRLF = "\r\n"
+    private_constant :COLON, :CRLF
 
     def to_ical(buffer = nil)
       buffer ||= String.new
@@ -46,8 +47,8 @@ module Icalendar
     def append_ical_property(buffer, wire_name, value, default_type)
       if value.is_a?(Icalendar::Value) && value.method(:to_ical).owner == Icalendar::Value
         value.ical_param('value', value.send(:value_type)) if value.send(:needs_value_type?, default_type)
-        params = value.params_ical
-        val = value.value_ical
+        params = value.params_ical&.to_s
+        val = value.value_ical.to_s
         if params
           if wire_name.bytesize + params.bytesize + 1 + val.bytesize <= Icalendar::MAX_LINE_LENGTH
             buffer << wire_name << params << COLON << val << CRLF

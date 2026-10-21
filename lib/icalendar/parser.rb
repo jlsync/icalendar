@@ -82,6 +82,7 @@ module Icalendar
     end
 
     # An even number of backslashes leaves the following delimiter unescaped.
+    WRAP_PROPERTY_VALUE_DELIMETER_REGEX = /(?<!\\)(?:\\\\)*([,;])/.freeze
     WRAP_PROPERTY_VALUE_SPLIT_REGEX = /(?<!\\)(?:\\\\)*([;,])/.freeze
 
     def wrap_property_value(component, fields, multi_property)

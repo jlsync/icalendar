@@ -48,6 +48,10 @@ describe Icalendar::Values::Text do
     it 'rejects non-Hash params' do
       expect { described_class.new('x', []) }.to raise_error ArgumentError
     end
+
+    it 'rejects non-string values' do
+      expect { described_class.new(42) }.to raise_error NoMethodError
+    end
   end
 
   describe 'unescape is the exact inverse of value_ical' do

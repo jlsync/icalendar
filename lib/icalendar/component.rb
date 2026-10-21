@@ -46,9 +46,9 @@ module Icalendar
 
     def append_ical_property(buffer, wire_name, value, default_type)
       if value.is_a?(Icalendar::Value) && value.method(:to_ical).owner == Icalendar::Value
-        value.ical_param('value', value.send(:value_type)) if value.send(:needs_value_type?, default_type)
-        params = value.params_ical&.to_s
-        val = value.value_ical.to_s
+        value.send(:ical_param, 'value', value.send(:value_type)) if value.send(:needs_value_type?, default_type)
+        params = value.send(:params_ical)&.to_s
+        val = value.send(:value_ical).to_s
         if params
           if wire_name.bytesize + params.bytesize + 1 + val.bytesize <= Icalendar::MAX_LINE_LENGTH
             buffer << wire_name << params << COLON << val << CRLF
@@ -177,11 +177,17 @@ module Icalendar
 
     def append_ical_component(buffer, component)
       serializer = component.method(:to_ical)
-      if serializer.owner == Icalendar::Component || (first = serializer.parameters.first; first && (first[0] == :req || first[0] == :opt) && (first[1] == :buffer || first[1] == :buf))
+      if serializer.owner == Icalendar::Component
         component.to_ical(buffer)
+      elsif (first = serializer.parameters.first; first && (first[0] == :req || first[0] == :opt) && (first[1] == :buffer || first[1] == :buf))
+        size_before = buffer.bytesize
+        result = component.to_ical(buffer)
+        buffer << result if buffer.bytesize == size_before && result.is_a?(String)
       else
         buffer << component.to_ical
       end
+    rescue NameError
+      buffer << component.to_ical
     end
 
     class << self

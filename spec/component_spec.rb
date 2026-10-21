@@ -137,5 +137,57 @@ describe Icalendar::Component do
 
       expect(cal.to_ical).to include "BEGIN:VBUFFERKW\r\nX-NAME:BufferKw\r\nEND:VBUFFERKW\r\n"
     end
+
+    it 'supports nested components with to_ical(buffer = nil) that returns a string without mutating buffer' do
+      subclass = Class.new(described_class) do
+        def to_ical(buffer = nil)
+          "BEGIN:VRETURN\r\nX-NAME:Return\r\nEND:VRETURN\r\n"
+        end
+      end
+      cal = Icalendar::Calendar.new
+      cal.add_custom_component 'returning', subclass.new('returning')
+
+      expect(cal.to_ical).to include "BEGIN:VRETURN\r\nX-NAME:Return\r\nEND:VRETURN\r\n"
+    end
+
+    it 'supports nested components implemented via method_missing' do
+      dynamic_class = Class.new do
+        attr_accessor :parent
+
+        def method_missing(method_name, *args, &block)
+          if method_name == :to_ical
+            "BEGIN:VDYNAMIC\r\nX-NAME:Dynamic\r\nEND:VDYNAMIC\r\n"
+          else
+            super
+          end
+        end
+      end
+      cal = Icalendar::Calendar.new
+      cal.add_custom_component 'dynamic', dynamic_class.new
+
+      expect(cal.to_ical).to include "BEGIN:VDYNAMIC\r\nX-NAME:Dynamic\r\nEND:VDYNAMIC\r\n"
+    end
+
+    it 'supports Value subclasses with private value_ical or params_ical' do
+      priv_value_class = Class.new(Icalendar::Value) do
+        def self.value_type
+          'PRIVATE'
+        end
+
+        private
+
+        def value_ical
+          'secret'
+        end
+
+        def params_ical
+          ';KEY=val'
+        end
+      end
+      component = described_class.new 'test'
+      component.append_custom_property 'priv', priv_value_class.new('secret')
+
+      expect(component.to_ical).to include "PRIV;KEY=val:secret\r\n"
+    end
   end
 end

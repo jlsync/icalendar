@@ -8,7 +8,9 @@ module Icalendar
       end
 
       def normalized_value
-        Icalendar.logger.debug { "Plan a - parsing #{value}/#{tzid} as ActiveSupport::TimeWithZone" }
+        if ::Logger::DEBUG >= Icalendar.logger.level
+          Icalendar.logger.debug("Plan a - parsing #{value}/#{tzid} as ActiveSupport::TimeWithZone")
+        end
         # plan a - use ActiveSupport::TimeWithZone
         Icalendar::Values::Helpers::ActiveSupportTimeWithZoneAdapter.new(nil, tz, value)
       end

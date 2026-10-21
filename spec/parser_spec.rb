@@ -164,6 +164,45 @@ describe Icalendar::Parser do
         expect(sink.string).to match(/Plan a - parsing|Ignoring timezone/)
       end
     end
+
+    context 'with a duck-typed logger that only accepts a message argument' do
+      let(:logger_class) do
+        Class.new do
+          attr_accessor :level
+          attr_reader :messages
+
+          def initialize(level)
+            @level = level
+            @messages = []
+          end
+
+          %w[debug info warn error fatal].each do |severity|
+            define_method(severity) { |message| @messages << message }
+          end
+        end
+      end
+      let(:source) { File.read File.join(File.dirname(__FILE__), 'fixtures', 'single_event.ics') }
+
+      around do |example|
+        original = Icalendar.logger
+        example.run
+      ensure
+        Icalendar.logger = original
+      end
+
+      it 'parses and receives the debug messages at debug level' do
+        Icalendar.logger = logger_class.new ::Logger::DEBUG
+        subject.parse
+        expect(Icalendar.logger.messages).to include 'Adding component Event'
+        expect(Icalendar.logger.messages.grep(/Plan a - parsing|Ignoring timezone/)).not_to be_empty
+      end
+
+      it 'parses without logging at warn level' do
+        Icalendar.logger = logger_class.new ::Logger::WARN
+        expect(subject.parse.first.events.size).to eq 1
+        expect(Icalendar.logger.messages).to be_empty
+      end
+    end
   end
 
   describe '#parse with invalid nesting' do

@@ -42,4 +42,26 @@ describe Icalendar::Component do
       end
     end
   end
+
+  describe 'generated property accessors' do
+    let(:parent) { Class.new(described_class) { optional_property :tags } }
+    let(:child) do
+      Class.new(parent) do
+        attr_reader :setter_calls
+
+        def tags=(value)
+          @setter_calls = (@setter_calls || 0) + 1
+          super
+        end
+      end
+    end
+
+    it 'initializes a multi property through the possibly overridden setter' do
+      component = child.new 'test'
+      expect(component.tags).to eq []
+      expect(component.setter_calls).to eq 1
+      expect(component.tags).to eq []
+      expect(component.setter_calls).to eq 1
+    end
+  end
 end

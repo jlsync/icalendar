@@ -9,7 +9,9 @@ module Icalendar
 
       def normalized_value
         # plan c - try to find an ActiveSupport::TimeWithZone based on the first word of the tzid
-        Icalendar.logger.debug { "Plan c - parsing #{value}/#{tz.tzinfo.name} as ActiveSupport::TimeWithZone" }
+        if ::Logger::DEBUG >= Icalendar.logger.level
+          Icalendar.logger.debug("Plan c - parsing #{value}/#{tz.tzinfo.name} as ActiveSupport::TimeWithZone")
+        end
         Icalendar::Values::Helpers::ActiveSupportTimeWithZoneAdapter.new(nil, tz, value)
       end
 

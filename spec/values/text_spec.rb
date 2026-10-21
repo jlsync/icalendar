@@ -38,9 +38,18 @@ describe Icalendar::Values::Text do
         expect(text.value).to eq 'plain text'
       end
 
-      it 'stores a plain String for a String subclass' do
-        klass = Class.new(String)
-        expect(described_class.new(klass.new('plain')).value.class).to be String
+      it 'still honours a gsub override on a String subclass' do
+        klass = Class.new(String) do
+          def gsub(*args)
+            super.gsub('secret', '[redacted]')
+          end
+        end
+        expect(described_class.new(klass.new('a secret')).value).to eq 'a [redacted]'
+      end
+
+      it 'rejects an invalid byte sequence in the constructor' do
+        invalid = "caf\xE9".b.force_encoding(Encoding::UTF_8)
+        expect { described_class.new(invalid) }.to raise_error ArgumentError, /invalid byte sequence/
       end
     end
   end

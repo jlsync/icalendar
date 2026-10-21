@@ -249,8 +249,8 @@ module Icalendar
       'RDATE' => 'rdate', 'REQUEST-STATUS' => 'request_status', 'RESOURCES' => 'resources',
       'CLASS' => 'class', 'PRIORITY' => 'priority'
     }.freeze
-    KNOWN_SETTER_METHODS = NAME_LOOKUP.values.to_h { |n| [n, :"#{n}="] }.freeze
-    KNOWN_APPEND_METHODS = NAME_LOOKUP.values.to_h { |n| [n, :"append_#{n}"] }.freeze
+    KNOWN_SETTER_METHODS = (NAME_LOOKUP.values + %w[ip_class ip_method ip_name]).to_h { |n| [n, :"#{n}="] }.freeze
+    KNOWN_APPEND_METHODS = (NAME_LOOKUP.values + %w[ip_class ip_method ip_name]).to_h { |n| [n, :"append_#{n}"] }.freeze
 
     def parse_fields(input)
       debug = ::Logger::DEBUG >= Icalendar.logger.level

@@ -47,5 +47,10 @@ describe Icalendar::Values::DateOrDateTime do
       event.dtstart = described_class.new time_stamp, "tzid" => "UTC"
       expect(event.to_ical).to include "DTSTART:#{time_stamp}Z"
     end
+
+    it "serializes a date value when assigned without calling call" do
+      event.dtstart = described_class.new "20240101"
+      expect(event.to_ical).to include "DTSTART;VALUE=DATE:20240101"
+    end
   end
 end

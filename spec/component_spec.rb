@@ -213,5 +213,19 @@ describe Icalendar::Component do
 
       expect(cal.to_ical).to include "BEGIN:VOUTPUT\r\nX-NAME:Output\r\nEND:VOUTPUT\r\n"
     end
+
+    it 'does not duplicate calendar content when a nested serializer emits nothing and returns the buffer' do
+      subclass = Class.new(described_class) do
+        def to_ical(buffer = nil)
+          buffer ||= String.new
+          buffer
+        end
+      end
+      cal = Icalendar::Calendar.new
+      cal.add_custom_component 'noop', subclass.new('noop')
+
+      output = cal.to_ical
+      expect(output.scan('BEGIN:VCALENDAR').count).to eq 1
+    end
   end
 end

@@ -189,7 +189,7 @@ module Icalendar
       elsif (first = serializer.parameters.first; first && (first[0] == :req || (first[0] == :opt && (first[1] == :buffer || first[1] == :buf))))
         size_before = buffer.bytesize
         result = component.to_ical(buffer)
-        buffer << result if buffer.bytesize == size_before && result.is_a?(String)
+        buffer << result if buffer.bytesize == size_before && result.is_a?(String) && !result.equal?(buffer)
       else
         buffer << component.to_ical
       end

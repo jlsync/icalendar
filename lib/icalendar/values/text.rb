@@ -14,7 +14,9 @@ module Icalendar
 
       def initialize(value, *args)
         # One left-to-right pass keeps unescape the exact inverse of value_ical; \n and \N are newline.
-        value = value.gsub(UNESCAPE_GSUB_REGEX, UNESCAPES)
+        # A value with no backslash has nothing to unescape; copy it so the stored string
+        # is isolated from the caller, exactly as gsub would have done.
+        value = value.include?('\\') ? value.gsub(UNESCAPE_GSUB_REGEX, UNESCAPES) : String.new(value)
         super value, *args
       end
 

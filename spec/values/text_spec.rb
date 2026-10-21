@@ -28,6 +28,21 @@ describe Icalendar::Values::Text do
         expect(subject.value).to eq unescaped
       end
     end
+
+    context 'given a value with nothing to unescape' do
+      let(:value) { String.new('plain text') }
+
+      it 'stores a copy rather than the original string' do
+        text = subject
+        value << ' changed'
+        expect(text.value).to eq 'plain text'
+      end
+
+      it 'stores a plain String for a String subclass' do
+        klass = Class.new(String)
+        expect(described_class.new(klass.new('plain')).value.class).to be String
+      end
+    end
   end
 
   describe 'frozen values' do

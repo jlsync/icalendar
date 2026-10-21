@@ -176,7 +176,7 @@ module Icalendar
           break
         elsif fields[:name] == 'begin'
           klass_name = fields[:value].delete_prefix('V').tr('-', '_').capitalize
-          Icalendar.logger.debug "Adding component #{klass_name}"
+          Icalendar.logger.debug { "Adding component #{klass_name}" }
           if Object.const_defined? "Icalendar::#{klass_name}"
             component.add_component parse_component(Object.const_get("Icalendar::#{klass_name}").new)
           elsif Object.const_defined? "Icalendar::Timezone::#{klass_name}"
@@ -238,7 +238,7 @@ module Icalendar
         if colon
           name = input.byteslice(0, colon)
           if name.match?(SIMPLE_LINE_NAME_REGEX)
-            name.tr!('A-Z-', 'a-z_')
+            normalize_name!(name)
             return {
               name: name,
               params: {},
@@ -273,13 +273,20 @@ module Icalendar
       if debug
         Icalendar.logger.debug "Found fields: #{parts.inspect} with params: #{params.inspect}"
       end
-      name = parts[:name]
-      name.tr!('A-Z-', 'a-z_')
+      name = normalize_name!(parts[:name])
       {
         name: name,
         params: params,
         value: value
       }
+    end
+
+    # Property and component names are ASCII (they matched NAME above), so downcase!
+    # is equivalent to tr!('A-Z', 'a-z') but avoids building a translation table.
+    def normalize_name!(name)
+      name.downcase!
+      name.tr!('-', '_') if name.include?('-')
+      name
     end
 
     class ParseError < RuntimeError

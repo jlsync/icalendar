@@ -17,11 +17,15 @@ module Icalendar
     end
 
     def [](key)
+      return nil if obj.empty?
+
       key = key.to_s
       obj.fetch(key) { obj[key.downcase] }
     end
 
     def has_key?(key)
+      return false if obj.empty?
+
       key = key.to_s
       obj.key?(key) || obj.key?(key.downcase)
     end

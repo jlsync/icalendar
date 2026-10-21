@@ -130,6 +130,40 @@ describe Icalendar::Parser do
         expect(subject.parse.first.events.first.summary.value).to eq 'still parsed'
       end
     end
+
+    context 'with mixed-case and hyphenated names' do
+      let(:source) do
+        "Begin:vCalendar\r\nVERSION:2.0\r\nPRODID:test\r\n" \
+          "begin:VEVENT\r\nuid:1\r\nDtStamp:20240101T000000Z\r\n" \
+          "Last-Modified:20240102T000000Z\r\nX-Custom-Prop;Some-Param=1:ok\r\nEND:vevent\r\nend:VCALENDAR\r\n"
+      end
+
+      it 'normalizes property and component names' do
+        event = subject.parse.first.events.first
+        expect(event.last_modified.value_ical).to eq '20240102T000000Z'
+        expect(event.x_custom_prop.first.value).to eq 'ok'
+        expect(event.x_custom_prop.first.ical_params['some-param']).to eq ['1']
+      end
+    end
+
+    context 'with a logger at debug level' do
+      let(:sink) { StringIO.new }
+      let(:source) { File.read File.join(File.dirname(__FILE__), 'fixtures', 'single_event.ics') }
+
+      around do |example|
+        original = Icalendar.logger
+        Icalendar.logger = Icalendar::Logger.new sink, ::Logger::DEBUG
+        example.run
+      ensure
+        Icalendar.logger = original
+      end
+
+      it 'still writes the debug messages' do
+        subject.parse
+        expect(sink.string).to include 'Adding component Event'
+        expect(sink.string).to match(/Plan a - parsing|Ignoring timezone/)
+      end
+    end
   end
 
   describe '#parse with invalid nesting' do

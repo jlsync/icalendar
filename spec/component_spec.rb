@@ -74,5 +74,16 @@ describe Icalendar::Component do
 
       expect(cal.to_ical).to include "BEGIN:VEVENT\r\nSUMMARY:Singleton\r\nEND:VEVENT\r\n"
     end
+
+    it 'supports nested components with keyword-only to_ical overrides' do
+      cal = Icalendar::Calendar.new
+      event = Icalendar::Event.new
+      def event.to_ical(format: nil)
+        "BEGIN:VEVENT\r\nSUMMARY:Keyword\r\nEND:VEVENT\r\n"
+      end
+      cal.add_event(event)
+
+      expect(cal.to_ical).to include "BEGIN:VEVENT\r\nSUMMARY:Keyword\r\nEND:VEVENT\r\n"
+    end
   end
 end

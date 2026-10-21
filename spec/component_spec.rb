@@ -85,5 +85,18 @@ describe Icalendar::Component do
 
       expect(cal.to_ical).to include "BEGIN:VEVENT\r\nSUMMARY:Keyword\r\nEND:VEVENT\r\n"
     end
+
+    it 'supports nested components with legacy options hash to_ical overrides' do
+      subclass = Class.new(described_class) do
+        def to_ical(options = {})
+          raise "Expected Hash, got #{options.class}" unless options.is_a?(Hash)
+          "BEGIN:VOPTIONS\r\nX-NAME:Options\r\nEND:VOPTIONS\r\n"
+        end
+      end
+      cal = Icalendar::Calendar.new
+      cal.add_custom_component 'options', subclass.new('options')
+
+      expect(cal.to_ical).to include "BEGIN:VOPTIONS\r\nX-NAME:Options\r\nEND:VOPTIONS\r\n"
+    end
   end
 end

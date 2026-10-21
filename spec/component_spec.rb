@@ -52,6 +52,17 @@ describe Icalendar::Component do
       expect(buffer).to end_with "END:VTEST\r\n"
     end
 
+    it 'respects singleton to_ical overrides on property values' do
+      component = described_class.new 'test'
+      custom_value = Icalendar::Values::Text.new('original')
+      def custom_value.to_ical(default_type = nil)
+        ":OVERRIDDEN"
+      end
+      component.append_custom_property 'summary', custom_value
+
+      expect(component.to_ical).to include "SUMMARY:OVERRIDDEN\r\n"
+    end
+
     it 'supports nested components with a zero-argument to_ical override' do
       subclass = Class.new(described_class) do
         def to_ical

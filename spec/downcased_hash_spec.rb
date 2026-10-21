@@ -60,11 +60,11 @@ describe Icalendar::DowncasedHash do
   end
 
   describe 'DowncasedHash()' do
-    it 'returns self when passed an DowncasedHash' do
+    it 'returns self when passed a DowncasedHash' do
       expect(Icalendar::DowncasedHash(subject)).to be subject
     end
 
-    it 'wraps a hash in an downcased hash' do
+    it 'wraps a hash in a downcased hash' do
       expect(Icalendar::DowncasedHash(base)).to be_kind_of Icalendar::DowncasedHash
     end
   end

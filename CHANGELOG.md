@@ -103,7 +103,7 @@
  - Fix usage without ActiveSupport installed.
 
 ## 2.5.0 - 2018-09-10
- - Set timezone information from VTIMEZONE components in cases that ActiveSupport can't figure it out (or isn't installed)
+ - Set timezone information from VTIMEZONE components in cases where ActiveSupport can't figure it out (or isn't installed)
  - Prevent rewinding the Parser IO input during parsing - Niels Laukens
  - Update tested/supported ruby versions & documentation updates.
 
@@ -230,7 +230,7 @@
 
 ## 1.2.0 - 2012-08-30
 * Fix calendar handling for dates < 1000 - Ryan Ahearn
-* Updated license to GPL/BSD/Ruby at users option
+* Updated license to GPL/BSD/Ruby at the user's option
 
 ## 1.1.6 - 2011-03-10
 * Fix todo handling (thanks to Frank Schwarz)
@@ -246,7 +246,7 @@
 
 ## 1.1.3 - 2010-03-15
 * Revert component sorting behavior that I was trying to make
-the tests run more consistantly on different platforms.
+the tests run more consistently on different platforms.
 * Added new test for multiple events in a calendar which caught that break.
 
 ## 1.1.2 - 2010-03-10

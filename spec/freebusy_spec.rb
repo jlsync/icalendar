@@ -2,6 +2,6 @@ require 'spec_helper'
 
 describe Icalendar::Freebusy do
 
-  # currently no behavior in Journal not tested other places
+  # currently no behavior in Freebusy not tested other places
 
 end

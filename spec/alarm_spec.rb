@@ -9,7 +9,7 @@ describe Icalendar::Alarm do
         a.trigger = Icalendar::Values::DateTime.new(Time.now.utc)
       end
     end
-    context 'neither duration or repeat is set' do
+    context 'neither duration nor repeat is set' do
       before(:each) { subject.action = 'AUDIO' }
       it { should be_valid }
     end

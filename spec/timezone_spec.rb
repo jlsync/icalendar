@@ -24,7 +24,7 @@ describe Icalendar::Timezone do
       it { expect(subject).to be_valid }
     end
 
-    context 'with neither standard or daylight' do
+    context 'with neither standard nor daylight' do
       it { should_not be_valid }
     end
   end
@@ -54,7 +54,7 @@ describe Icalendar::Timezone do
         expect(first_standard.valid?).to be_truthy
         expect(first_daylight.valid?).to be_truthy
 
-        # calling previous_occurrence intializes @cached_occurrences with a time that's not handled by ruby marshaller
+        # calling previous_occurrence initializes @cached_occurrences with a time that's not handled by ruby marshaller
         first_occurence_for = Time.new(1601, 10, 31)
 
         standard_previous_occurrence = first_standard.previous_occurrence(first_occurence_for)

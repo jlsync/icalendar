@@ -162,15 +162,23 @@ module Icalendar
     def append_ical_components(buffer)
       self.class.components.each do |component_name|
         send(component_name).each do |component|
-          component.to_ical(buffer)
+          append_ical_component(buffer, component)
         end
       end
 
       return if custom_components.empty?
       custom_components.each_value do |components|
         components.each do |component|
-          component.to_ical(buffer)
+          append_ical_component(buffer, component)
         end
+      end
+    end
+
+    def append_ical_component(buffer, component)
+      if component.class.instance_method(:to_ical).owner == Icalendar::Component || component.method(:to_ical).arity != 0
+        component.to_ical(buffer)
+      else
+        buffer << component.to_ical
       end
     end
 

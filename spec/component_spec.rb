@@ -51,5 +51,17 @@ describe Icalendar::Component do
       expect(buffer).to start_with "PRELUDE\r\nBEGIN:VTEST\r\n"
       expect(buffer).to end_with "END:VTEST\r\n"
     end
+
+    it 'supports nested components with a zero-argument to_ical override' do
+      subclass = Class.new(described_class) do
+        def to_ical
+          "BEGIN:VCUSTOM\r\nX-NAME:Custom\r\nEND:VCUSTOM\r\n"
+        end
+      end
+      cal = Icalendar::Calendar.new
+      cal.add_custom_component 'custom', subclass.new('custom')
+
+      expect(cal.to_ical).to include "BEGIN:VCUSTOM\r\nX-NAME:Custom\r\nEND:VCUSTOM\r\n"
+    end
   end
 end

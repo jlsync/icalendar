@@ -45,6 +45,7 @@ module Icalendar
     private
 
     def append_ical_property(buffer, wire_name, value, default_type)
+      # Inspect bound method owner so custom or singleton to_ical overrides take the standard formatting path
       if value.is_a?(Icalendar::Value) && value.method(:to_ical).owner == Icalendar::Value
         value.send(:ical_param, 'value', value.send(:value_type)) if value.send(:needs_value_type?, default_type)
         params = value.send(:params_ical)&.to_s

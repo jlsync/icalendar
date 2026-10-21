@@ -1,5 +1,5 @@
 ## Unreleased
-- Improve parsing and ICS generation performance with no change to generated output or the public API.
+- Improve parsing and ICS generation performance with no breaking change to the public API or serialized output.
   - `Component#to_ical` optionally accepts a destination buffer string to append into, significantly reducing allocations when generating large calendars. Nested component subclasses and custom overrides that accept a required positional parameter or an optional parameter named `buffer`/`buf` receive the shared buffer; legacy overrides without buffer parameters continue to be called with zero arguments and have their return values appended.
 
 ## 2.14.0 - 2026-10-20

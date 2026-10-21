@@ -63,5 +63,16 @@ describe Icalendar::Component do
 
       expect(cal.to_ical).to include "BEGIN:VCUSTOM\r\nX-NAME:Custom\r\nEND:VCUSTOM\r\n"
     end
+
+    it 'supports nested components with a zero-argument singleton to_ical override' do
+      cal = Icalendar::Calendar.new
+      event = Icalendar::Event.new
+      def event.to_ical
+        "BEGIN:VEVENT\r\nSUMMARY:Singleton\r\nEND:VEVENT\r\n"
+      end
+      cal.add_event(event)
+
+      expect(cal.to_ical).to include "BEGIN:VEVENT\r\nSUMMARY:Singleton\r\nEND:VEVENT\r\n"
+    end
   end
 end

@@ -175,7 +175,8 @@ module Icalendar
     end
 
     def append_ical_component(buffer, component)
-      if component.class.instance_method(:to_ical).owner == Icalendar::Component || component.method(:to_ical).arity != 0
+      serializer = component.method(:to_ical)
+      if serializer.owner == Icalendar::Component || serializer.arity != 0
         component.to_ical(buffer)
       else
         buffer << component.to_ical

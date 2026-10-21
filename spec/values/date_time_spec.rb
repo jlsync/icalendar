@@ -12,7 +12,7 @@ describe Icalendar::Values::DateTime do
   if defined? ActiveSupport
 
     context 'with ActiveSupport' do
-      it 'parses a string to a ActiveSupport::TimeWithZone instance' do
+      it 'parses a string to an ActiveSupport::TimeWithZone instance' do
         expect(subject.value).to be_a_kind_of ActiveSupport::TimeWithZone
         expect(subject.value_ical).to eq value
       end

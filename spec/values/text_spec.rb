@@ -153,7 +153,7 @@ describe Icalendar::Values::Text do
     end
     context 'nil value' do
       let(:param_value) { nil }
-      it 'trats nil as blank' do
+      it 'treats nil as blank' do
         expect(subject.params_ical).to eq %(;PARAM=)
       end
     end

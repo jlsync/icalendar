@@ -42,7 +42,7 @@ describe Icalendar do
       ical = Icalendar::Calendar.parse(source).first.to_ical
       source_equal = ical == source
       # rbx-3 parses the organizer as a URI, which strips the space and lowercases everything after the first :
-      # this is correct behavior, according to the icalendar spec, so we're not fudging the parser to accomodate
+      # this is correct behavior, according to the icalendar spec, so we're not fudging the parser to accommodate
       # facebook not properly wrapping the CN param in dquotes
       source_lowered_equal = ical == source_lowered_uri
       expect(source_equal || source_lowered_equal).to be true

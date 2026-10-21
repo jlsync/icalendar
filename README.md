@@ -8,13 +8,13 @@ iCalendar -- Internet calendaring, Ruby style
 
 ### Upgrade from 1.x ###
 
-Better documentation is still to come, but in the meantime the changes needed to move from 1.x to 2.0 are summarized by the [diff needed to update the README](https://github.com/icalendar/icalendar/commit/bc3701e004c915a250054030a9375d1e7618857f)
+Better documentation is still to come, but in the meantime the changes needed to move from 1.x to 2.0 are summarized by the [diff needed to update the README](https://github.com/icalendar/icalendar/commit/bc3701e004c915a250054030a9375d1e7618857f).
 
 DESCRIPTION
 ---
 
 iCalendar is a Ruby library for dealing with iCalendar files in the
-iCalendar format defined by [RFC-5545](http://tools.ietf.org/html/rfc5545).
+iCalendar format defined by [RFC 5545](http://tools.ietf.org/html/rfc5545).
 
 Requires Ruby 3.4 or newer.
 
@@ -77,7 +77,7 @@ event.summary.ical_params #=> {'altrep' => 'http://my.language.net', 'language' 
 
 #### Support for Dates or DateTimes
 
-Sometimes we don't care if an event's start or end are `Date` or `DateTime` objects. For this, we can use `DateOrDateTime.new(value)`. Calling `.call` on the returned `DateOrDateTime` will immediately return the underlying `Date` or `DateTime` object.
+Sometimes we don't care whether an event's start or end is a `Date` or `DateTime` object. For this, we can use `DateOrDateTime.new(value)`. Calling `.call` on the returned `DateOrDateTime` will immediately return the underlying `Date` or `DateTime` object.
 
 ```ruby
 event = cal.event do |e|
@@ -271,11 +271,11 @@ puts "start date-time timezone: #{event.dtstart.ical_params['tzid']}"
 puts "summary: #{event.summary}"
 ```
 
-You can also create a `Parser` instance directly, this can be used to enable
+You can also create a `Parser` instance directly. This can be used to enable
 strict parsing:
 
 ```ruby
-# Sometimes you want to strongly verify only rfc-approved properties are
+# Sometimes you want to strongly verify that only RFC-approved properties are
 # used
 strict_parser = Icalendar::Parser.new(cal_file, true)
 cal = strict_parser.parse
@@ -301,8 +301,8 @@ puts "summary: #{event.summary}"
 Finders
 ---
 
-Often times in web apps and other interactive applications you'll need to
-lookup items in a calendar to make changes or get details.  Now you can find
+Oftentimes in web apps and other interactive applications you'll need to
+look up items in a calendar to make changes or get details. Now you can find
 everything by the unique id automatically associated with all components.
 
 ```ruby
@@ -333,7 +333,7 @@ The latest release version of this library can be found at
 Installation
 ---
 
-It's all about rubygems:
+It's all about RubyGems:
 
     $ gem install icalendar
 

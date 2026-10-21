@@ -9,7 +9,7 @@
 =end
 
 # The following adds a bunch of mixins to the tzinfo class, with the
-# intent on making it very easy to load in tzinfo data for generating
+# intent of making it very easy to load in tzinfo data for generating
 # ical events.  With this you can do the following:
 #
 #   require "icalendar/tzinfo"
@@ -34,9 +34,9 @@
 #
 #   puts cal.to_ical
 #
-# The recurance rule calculations are hacky, and only start at the
-# beginning of the current dst transition.  I doubt this works for non
-# dst areas yet.  However, for a standard dst flipping zone, this
+# The recurrence rule calculations are hacky, and only start at the
+# beginning of the current DST transition. I doubt this works for non-DST
+# areas yet. However, for a standard DST-flipping zone, this
 # seems to work fine (tested in Mozilla Thunderbird + Lightning).
 # Future goal would be making this better.
 
@@ -45,7 +45,7 @@ require 'tzinfo'
 begin
   require 'tzinfo/data'
 rescue LoadError
-  Icalendar.logger.info "Could not load tzinfo/data, hopefully tzinfo is accurate (ignore for tzinfo 0.x)"
+  Icalendar.logger.info "Could not load tzinfo/data; hopefully tzinfo is accurate (ignore for tzinfo 0.x)"
 end
 
 module Icalendar
@@ -148,7 +148,7 @@ module TZInfo
     end
 
     # For standard TZ, use the start_transition,
-    # for DST, use the following period, (starting from the end_transition)
+    # for DST, use the following period (starting from the end_transition).
     def standard
       transition = dst? ? end_transition : start_transition
       std = Icalendar::Timezone::Standard.new

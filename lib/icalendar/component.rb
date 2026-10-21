@@ -91,9 +91,9 @@ module Icalendar
       # of CRLF followed immediately by a single linear white space character
       # is ignored (i.e., removed) when processing the content type.
       #
-      # Note the useage of "octets" and "characters": a line should not be longer
+      # Note the usage of "octets" and "characters": a line should not be longer
       # than 75 octets, but you need to split between characters, not bytes.
-      # This is challanging with Unicode composing accents, for example.
+      # This is challenging with Unicode composing accents, for example.
 
       return long_line if long_line.bytesize <= Icalendar::MAX_LINE_LENGTH
 

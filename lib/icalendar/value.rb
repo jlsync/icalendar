@@ -11,8 +11,8 @@ module Icalendar
     attr_accessor :ical_params, :context
 
     def initialize(value, params = {}, context = {})
-      @ical_params = Icalendar::DowncasedHash(params)
-      @context = Icalendar::DowncasedHash(context)
+      @ical_params = ::Icalendar::DowncasedHash(params)
+      @context = ::Icalendar::DowncasedHash(context)
       super value
     end
 
@@ -53,7 +53,7 @@ module Icalendar
     end
 
     def ==(other)
-      if other.is_a?(Icalendar::Value)
+      if other.is_a?(::Icalendar::Value)
         super(other.value) && ical_params == other.ical_params
       else
         super
@@ -67,7 +67,7 @@ module Icalendar
     end
 
     def param_ical(name, param_value)
-      if param_value.is_a? Array
+      if param_value.is_a? ::Array
         param_value = param_value.map { |v| escape_param_value v }.join ','
       else
         param_value = escape_param_value param_value

@@ -9,11 +9,11 @@ module Icalendar
 
       def initialize(value, *args)
         parts = value.split '/'
-        period_start = Icalendar::Values::DateTime.new parts.first
+        period_start = ::Icalendar::Values::DateTime.new parts.first
         if parts.last =~ PERIOD_LAST_PART_REGEX
-          period_end = Icalendar::Values::Duration.new parts.last
+          period_end = ::Icalendar::Values::Duration.new parts.last
         else
-          period_end = Icalendar::Values::DateTime.new parts.last
+          period_end = ::Icalendar::Values::DateTime.new parts.last
         end
         super [period_start, period_end], *args
       end
@@ -27,23 +27,23 @@ module Icalendar
       end
 
       def period_start=(v)
-        value[0] = v.is_a?(Icalendar::Values::DateTime) ? v : Icalendar::Values::DateTime.new(v)
+        value[0] = v.is_a?(::Icalendar::Values::DateTime) ? v : ::Icalendar::Values::DateTime.new(v)
       end
 
       def explicit_end
-        last.is_a?(Icalendar::Values::DateTime) ? last : nil
+        last.is_a?(::Icalendar::Values::DateTime) ? last : nil
       end
 
       def explicit_end=(v)
-        value[1] = v.is_a?(Icalendar::Values::DateTime) ? v : Icalendar::Values::DateTime.new(v)
+        value[1] = v.is_a?(::Icalendar::Values::DateTime) ? v : ::Icalendar::Values::DateTime.new(v)
       end
 
       def duration
-        last.is_a?(Icalendar::Values::Duration) ? last : nil
+        last.is_a?(::Icalendar::Values::Duration) ? last : nil
       end
 
       def duration=(v)
-        value[1] = v.is_a?(Icalendar::Values::Duration) ? v : Icalendar::Values::Duration.new(v)
+        value[1] = v.is_a?(::Icalendar::Values::Duration) ? v : ::Icalendar::Values::Duration.new(v)
       end
     end
   end

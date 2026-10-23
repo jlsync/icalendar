@@ -4,10 +4,10 @@ module Icalendar
   module Values
 
     class Duration < Value
-      Parts = Struct.new(:past, :weeks, :days, :hours, :minutes, :seconds, keyword_init: true)
+      Parts = ::Struct.new(:past, :weeks, :days, :hours, :minutes, :seconds, keyword_init: true)
 
       def initialize(value, *args)
-        if value.is_a? Icalendar::Values::Duration
+        if value.is_a? ::Icalendar::Values::Duration
           super value.value, *args
         else
           super Parts.new(**parse_fields(value)), *args

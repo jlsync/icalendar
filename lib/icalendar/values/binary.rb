@@ -17,7 +17,7 @@ module Icalendar
         if base64?
           value
         else
-          Base64.strict_encode64 value
+          ::Base64.strict_encode64 value
         end
       end
 
@@ -26,7 +26,7 @@ module Icalendar
       BASE_64_REGEX = /\A(?:[A-Za-z0-9+\/]{4})*(?:[A-Za-z0-9+\/]{4}|[A-Za-z0-9+\/]{3}=|[A-Za-z0-9+\/]{2}==)\z/.freeze
 
       def base64?
-        value.is_a?(String) &&
+        value.is_a?(::String) &&
             value =~ BASE_64_REGEX
       end
     end

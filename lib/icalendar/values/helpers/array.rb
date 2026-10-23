@@ -9,16 +9,16 @@ module Icalendar
         attr_reader :value_delimiter
 
         def initialize(value, klass, params = {}, context = {})
-          context = Icalendar::DowncasedHash(context)
+          context = ::Icalendar::DowncasedHash(context)
           @value_delimiter = context['delimiter'] || ','
           @params_merged = false
           mapped = if value.is_a? ::Array
                     value.map do |v|
-                      if v.is_a? Icalendar::Values::Helpers::Array
-                        Icalendar::Values::Helpers::Array.new v.value, klass, v.ical_params, context.merge(delimiter: v.value_delimiter)
+                      if v.is_a? ::Icalendar::Values::Helpers::Array
+                        ::Icalendar::Values::Helpers::Array.new v.value, klass, v.ical_params, context.merge(delimiter: v.value_delimiter)
                       elsif v.is_a? ::Array
-                        Icalendar::Values::Helpers::Array.new v, klass, params, context.merge(delimiter: value_delimiter)
-                      elsif v.is_a? Icalendar::Value
+                        ::Icalendar::Values::Helpers::Array.new v, klass, params, context.merge(delimiter: value_delimiter)
+                      elsif v.is_a? ::Icalendar::Value
                         v
                       else
                         klass.new v, params, context

@@ -9,7 +9,7 @@ module Icalendar
       WEEKDAY = "(?:[+-]?\\d{1,2})?(?:#{DAYNAME})"
       MONTHDAY = '[+-]?\d{1,2}'
       YEARDAY = '[+-]?\d{1,3}'
-      Parts = Struct.new(
+      Parts = ::Struct.new(
         :frequency,
         :until,
         :count,
@@ -28,7 +28,7 @@ module Icalendar
       )
 
       def initialize(value, *args)
-        if value.is_a? Icalendar::Values::Recur
+        if value.is_a? ::Icalendar::Values::Recur
           super value.value, *args
         else
           super Parts.new(**parse_fields(value)), *args

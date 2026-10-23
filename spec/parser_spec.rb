@@ -244,6 +244,69 @@ describe Icalendar::Parser do
         expect(subject.parse.first.events.first.summary.value).to eq 'logged'
         expect(Icalendar.logger.messages).to include 'Adding component Event'
       end
+
+      it 'falls back to a numeric level when an Icalendar::Logger wraps a logger without predicates' do
+        predicate_free = Class.new(logger_class) do
+          %w[debug? info? warn? error? fatal?].each { |predicate| undef_method predicate }
+        end
+        wrapper = Icalendar::Logger.new File::NULL
+        wrapper.__setobj__ predicate_free.new(::Logger::DEBUG)
+        Icalendar.logger = wrapper
+        expect(Icalendar.logger).not_to respond_to(:debug?)
+        subject.parse
+        expect(Icalendar.logger.messages).to include 'Adding component Event'
+      end
+
+      it 'checks the level once per parse rather than once per line' do
+        counting = Class.new(logger_class) do
+          attr_reader :debug_checks
+
+          def debug?
+            @debug_checks = (@debug_checks || 0) + 1
+            super
+          end
+        end
+        comments = ->(count) { Array.new(count) { |i| "COMMENT:line #{i}\r\n" }.join }
+        checks = [1, 40].map do |count|
+          Icalendar.logger = counting.new ::Logger::WARN
+          described_class.new(logging_source.sub("SUMMARY:", "#{comments.(count)}SUMMARY:"), false).parse
+          Icalendar.logger.debug_checks
+        end
+        expect(checks.first).to be_positive
+        expect(checks.last).to eq checks.first
+      end
+
+      it 'picks up a level change on the next parse' do
+        Icalendar.logger = logger_class.new ::Logger::WARN
+        subject.parse
+        expect(Icalendar.logger.messages).to be_empty
+
+        Icalendar.logger.level = ::Logger::DEBUG
+        described_class.new(source, false).parse
+        expect(Icalendar.logger.messages).to include 'Adding component Event'
+      end
+
+      it 'checks the level on each call to parse_property outside parse' do
+        Icalendar.logger = logger_class.new ::Logger::WARN
+        parser = described_class.new "SUMMARY:first\r\nSUMMARY:second\r\n", false
+        parser.parse_property Icalendar::Event.new
+        expect(Icalendar.logger.messages).to be_empty
+
+        Icalendar.logger.level = ::Logger::DEBUG
+        parser.parse_property Icalendar::Event.new
+        expect(Icalendar.logger.messages.grep(/Found fields/)).not_to be_empty
+      end
+
+      it 'checks the level afresh after a parse that raised' do
+        Icalendar.logger = logger_class.new ::Logger::WARN
+        nested = "BEGIN:VCALENDAR\r\n" + ("BEGIN:VEVENT\r\n" * 6) + "SUMMARY:after\r\n"
+        parser = described_class.new nested, false
+        expect { parser.parse }.to raise_error Icalendar::Parser::ParseError
+
+        Icalendar.logger.level = ::Logger::DEBUG
+        parser.parse_property Icalendar::Event.new
+        expect(Icalendar.logger.messages.grep(/Found fields/)).not_to be_empty
+      end
     end
   end
 

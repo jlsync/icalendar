@@ -45,6 +45,8 @@ module Icalendar
     end
 
     def parse
+      # Check the log level once per parse rather than once per content line.
+      @debug_logging = debug_logging? ? true : false
       components = []
       while (fields = next_fields)
         component = component_class.new
@@ -53,6 +55,8 @@ module Icalendar
         end
       end
       components
+    ensure
+      @debug_logging = nil
     end
 
     def parse_property(component, fields = nil)
@@ -155,6 +159,11 @@ module Icalendar
       level.is_a?(Integer) ? ::Logger::DEBUG >= level : true
     end
 
+    # The level read at the start of #parse, or a fresh check outside it.
+    def debug_logging_in_parse?
+      @debug_logging.nil? ? debug_logging? : @debug_logging
+    end
+
     def split_property_value(value)
       parts = []
       start = 0
@@ -187,7 +196,7 @@ module Icalendar
           break
         elsif fields[:name] == 'begin'
           klass_name = fields[:value].delete_prefix('V').tr('-', '_').capitalize
-          Icalendar.logger.debug "Adding component #{klass_name}" if debug_logging?
+          Icalendar.logger.debug "Adding component #{klass_name}" if debug_logging_in_parse?
           if Object.const_defined? "Icalendar::#{klass_name}"
             component.add_component parse_component(Object.const_get("Icalendar::#{klass_name}").new)
           elsif Object.const_defined? "Icalendar::Timezone::#{klass_name}"
@@ -242,7 +251,7 @@ module Icalendar
     SIMPLE_LINE_NAME_REGEX = /\A[-a-zA-Z0-9]+\z/.freeze
 
     def parse_fields(input)
-      debug = debug_logging?
+      debug = debug_logging_in_parse?
 
       unless debug
         colon = input.byteindex(':')

@@ -21,9 +21,9 @@ module Icalendar
 
       def parsed
         @parsed ||= begin
-                      Icalendar::Values::DateTime.new value, ical_params
-                    rescue Icalendar::Values::DateTime::FormatError
-                      Icalendar::Values::Date.new value, ical_params
+                      ::Icalendar::Values::DateTime.new value, ical_params
+                    rescue ::Icalendar::Values::DateTime::FormatError
+                      ::Icalendar::Values::Date.new value, ical_params
                     end
       end
 

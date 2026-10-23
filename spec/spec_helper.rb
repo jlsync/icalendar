@@ -12,7 +12,31 @@ end
 require 'timecop'
 require 'icalendar'
 
+module DelegatorConstMissingHelpers
+  # Records [class, constant name] for each Delegator.const_missing run inside the block:
+  # a constant a Delegator subclass could not see, because Object is not among its ancestors.
+  def delegator_const_misses
+    misses = []
+    trace = TracePoint.new(:call) do |tp|
+      if tp.defined_class == ::Delegator.singleton_class && tp.method_id == :const_missing
+        misses << [tp.self, first_argument(tp)]
+      end
+    end
+    trace.enable(target_thread: Thread.current) { yield }
+    misses
+  end
+
+  private
+
+  def first_argument(tp)
+    name = tp.parameters.dig(0, 1)
+    name && tp.binding.local_variable_get(name)
+  end
+end
+
 RSpec.configure do |config|
+  config.include DelegatorConstMissingHelpers
+
   config.run_all_when_everything_filtered = true
   config.filter_run :focus
 

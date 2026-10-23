@@ -11,10 +11,10 @@ module Icalendar
       def initialize(value, params = {}, *args)
         params.delete 'tzid'
         params.delete :tzid
-        if value.is_a? String
+        if value.is_a? ::String
           begin
             parsed_date = ::Date.strptime(value, FORMAT)
-          rescue ArgumentError => e
+          rescue ::ArgumentError => e
             raise FormatError.new("Failed to parse \"#{value}\" - #{e.message}")
           end
 
@@ -31,14 +31,14 @@ module Icalendar
       end
 
       def <=>(other)
-        if other.is_a?(Icalendar::Values::Date) || other.is_a?(Icalendar::Values::DateTime)
+        if other.is_a?(::Icalendar::Values::Date) || other.is_a?(::Icalendar::Values::DateTime)
           value_ical <=> other.value_ical
         else
           nil
         end
       end
 
-      class FormatError < ArgumentError
+      class FormatError < ::ArgumentError
       end
     end
 

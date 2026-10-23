@@ -4,15 +4,18 @@ describe Icalendar::Value do
   # Values are SimpleDelegators, so Object is not among their ancestors: an unqualified
   # top-level constant in a value method goes through Delegator.const_missing on every call.
   def value_const_misses(&block)
-    delegator_dispatches(&block).select do |kind, receiver, _name|
+    delegator_const_misses(&block).select do |receiver, _name|
       # Skips Delegator's own `when Object` lookup in the standard library and other gems' delegators.
-      kind == :const_missing && receiver.is_a?(Module) && receiver <= Icalendar::Value
+      receiver.is_a?(Module) && receiver <= Icalendar::Value
     end
   end
 
   def build_values
     [
       Icalendar::Values::Text.new('text', 'x-list' => %w[a b]),
+      Icalendar::Values::Boolean.new('TRUE'),
+      Icalendar::Values::Float.new('1.5'),
+      Icalendar::Values::Integer.new('2'),
       Icalendar::Values::Binary.new('aGVsbG8='),
       Icalendar::Values::Binary.new('hello'),
       Icalendar::Values::Date.new('20240101'),
@@ -20,6 +23,8 @@ describe Icalendar::Value do
       Icalendar::Values::DateTime.new('20240101T120000', 'tzid' => 'America/New_York'),
       Icalendar::Values::DateOrDateTime.new('20240101').call,
       Icalendar::Values::DateOrDateTime.new('20240101T120000').call,
+      Icalendar::Values::DateOrDateTime.new('20240101'),
+      Icalendar::Values::DateOrDateTime.new('20240101T120000Z'),
       Icalendar::Values::Time.new('120000'),
       Icalendar::Values::Duration.new(Icalendar::Values::Duration.new('P1D')),
       Icalendar::Values::Period.new('20240101T000000Z/P1D'),
@@ -37,10 +42,11 @@ describe Icalendar::Value do
 
   def exercise(values)
     values.each { |value| value.to_ical Icalendar::Values::Text }
-    values.first == values.first.dup
-    values[3] <=> values[4]
-    values[4] <=> values[3]
-    period = values[10]
+    expect(values.first == values.first.dup).to be true
+    date, date_time = values[6], values[7]
+    expect(date <=> date_time).to eq(-1)
+    expect(date_time <=> date).to eq 1
+    period = values[15]
     period.period_start = '20240102T000000Z'
     period.explicit_end = '20240103T000000Z'
     period.duration = 'PT1H'
@@ -53,7 +59,7 @@ describe Icalendar::Value do
     # A string body gives the method the class's own lexical scope, as in lib/.
     value_class.class_eval 'def value_ical; Comparable && super; end', __FILE__, __LINE__
     misses = value_const_misses { value_class.new('x').value_ical }
-    expect(misses).to include [:const_missing, value_class, :Comparable]
+    expect(misses).to include [value_class, :Comparable]
   end
 
   it 'constructs, compares and renders every value type without Delegator.const_missing' do
@@ -73,21 +79,40 @@ describe Icalendar::Value do
   end
 
   it 'parses and re-renders every fixture without Delegator.const_missing' do
+    original = Icalendar.logger
     paths = Dir[File.join(__dir__, 'fixtures', '*.ics')].sort
     expect(paths).not_to be_empty
     # Read as UTF-8 so the example does not depend on the process locale.
     sources = paths.to_h { |path| [File.basename(path), File.read(path, encoding: 'UTF-8')] }
     invalid = sources.delete 'invalid_nesting.ics'
-    original = Icalendar.logger
     Icalendar.logger = Icalendar::Logger.new File::NULL
     rendered = nil
     misses = value_const_misses do
-      rendered = sources.transform_values { |source| Icalendar::Calendar.parse(source).map(&:to_ical) }
+      rendered = sources.transform_values do |source|
+        # A few fixtures hold a bare VEVENT rather than a VCALENDAR.
+        component_class = source.start_with?('BEGIN:VEVENT') ? Icalendar::Event : Icalendar::Calendar
+        component_class.parse(source).map(&:to_ical)
+      end
       expect { Icalendar::Calendar.parse invalid }.to raise_error Icalendar::Parser::ParseError
     end
-    expect(rendered.values.flatten).not_to be_empty
+    expect(rendered).to all(satisfy { |_name, output| output.any? })
     expect(misses).to be_empty
   ensure
     Icalendar.logger = original
+  end
+
+  it 'loads the value classes without Delegator.const_missing' do
+    # Class bodies run once at require time, so load the gem in a fresh process.
+    script = <<~RUBY
+      misses = []
+      TracePoint.new(:call) do |tp|
+        next unless tp.method_id == :const_missing && tp.defined_class == Delegator.singleton_class
+        misses << "\#{tp.self}::\#{tp.binding.local_variable_get(tp.parameters.dig(0, 1))}" if tp.self.name.to_s.start_with?('Icalendar::')
+      end.enable { require 'icalendar' }
+      puts misses
+    RUBY
+    output = IO.popen([RbConfig.ruby, '-I', File.expand_path('../lib', __dir__), '-e', script], err: File::NULL, &:read)
+    expect($?).to be_success
+    expect(output.lines).to be_empty
   end
 end

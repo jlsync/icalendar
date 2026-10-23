@@ -266,14 +266,34 @@ describe Icalendar::Parser do
             super
           end
         end
-        comments = ->(count) { Array.new(count) { |i| "COMMENT:line #{i}\r\n" }.join }
-        checks = [1, 40].map do |count|
+        # Lines and components without time values, so only the parser checks the level.
+        padding = lambda do |lines, components|
+          Array.new(lines) { |i| "COMMENT:line #{i}\r\n" }.join +
+            Array.new(components) { |i| "BEGIN:X-PART\r\nX-INDEX:#{i}\r\nEND:X-PART\r\n" }.join
+        end
+        checks = [[1, 1], [40, 1], [1, 40]].map do |lines, components|
           Icalendar.logger = counting.new ::Logger::WARN
-          described_class.new(logging_source.sub("SUMMARY:", "#{comments.(count)}SUMMARY:"), false).parse
+          described_class.new(logging_source.sub("SUMMARY:", "#{padding.(lines, components)}SUMMARY:"), false).parse
           Icalendar.logger.debug_checks
         end
         expect(checks.first).to be_positive
-        expect(checks.last).to eq checks.first
+        expect(checks).to all(eq checks.first)
+      end
+
+      it 'treats a nil from debug? as disabled for the whole parse' do
+        nil_predicate = Class.new(logger_class) do
+          attr_reader :debug_checks
+
+          def debug?
+            @debug_checks = (@debug_checks || 0) + 1
+            nil
+          end
+        end
+        lines = Array.new(40) { |i| "COMMENT:line #{i}\r\n" }.join
+        Icalendar.logger = nil_predicate.new ::Logger::DEBUG
+        described_class.new("BEGIN:VCALENDAR\r\nBEGIN:X-PART\r\n#{lines}END:X-PART\r\nEND:VCALENDAR\r\n", false).parse
+        expect(Icalendar.logger.debug_checks).to eq 1
+        expect(Icalendar.logger.messages).to be_empty
       end
 
       it 'picks up a level change on the next parse' do

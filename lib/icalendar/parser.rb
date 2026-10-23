@@ -46,7 +46,7 @@ module Icalendar
 
     def parse
       # Check the log level once per parse rather than once per content line.
-      @debug_logging = debug_logging?
+      @debug_logging = debug_logging? ? true : false
       components = []
       while (fields = next_fields)
         component = component_class.new

@@ -12,32 +12,30 @@ end
 require 'timecop'
 require 'icalendar'
 
-module DelegatorDispatchHelpers
-  # Records the SimpleDelegator fallbacks run inside the block: method_missing and
-  # respond_to_missing? for a call forwarded to the wrapped object, and const_missing
-  # for a constant a Delegator subclass could not see (Object is not among its ancestors).
-  def delegator_dispatches
-    calls = []
+module DelegatorConstMissingHelpers
+  # Records [class, constant name] for each Delegator.const_missing run inside the block:
+  # a constant a Delegator subclass could not see, because Object is not among its ancestors.
+  def delegator_const_misses
+    misses = []
     trace = TracePoint.new(:call) do |tp|
-      if tp.defined_class == ::Delegator && %i[method_missing respond_to_missing?].include?(tp.method_id)
-        calls << [tp.method_id, tp.self.class, first_argument(tp)]
-      elsif tp.defined_class == ::Delegator.singleton_class && tp.method_id == :const_missing
-        calls << [:const_missing, tp.self, first_argument(tp)]
+      if tp.defined_class == ::Delegator.singleton_class && tp.method_id == :const_missing
+        misses << [tp.self, first_argument(tp)]
       end
     end
     trace.enable(target_thread: Thread.current) { yield }
-    calls
+    misses
   end
 
   private
 
   def first_argument(tp)
-    tp.binding.local_variable_get tp.parameters.first.last
+    name = tp.parameters.dig(0, 1)
+    name && tp.binding.local_variable_get(name)
   end
 end
 
 RSpec.configure do |config|
-  config.include DelegatorDispatchHelpers
+  config.include DelegatorConstMissingHelpers
 
   config.run_all_when_everything_filtered = true
   config.filter_run :focus

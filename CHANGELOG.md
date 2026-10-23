@@ -1,5 +1,6 @@
 ## Unreleased
 - Improve parsing and ICS generation performance with no change to generated output or the public API.
+- `Parser#parse` now checks whether debug logging is enabled once, when it starts, instead of on every content line, so a log level changed while a parse is running takes effect on the next parse.
 
 ## 2.14.0 - 2026-10-20
 - Require Ruby 3.4 or newer and test against Ruby 3.4 and 4.0.

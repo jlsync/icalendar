@@ -167,11 +167,11 @@ module Icalendar
         define_method "#{prop}=" do |value|
           mapped = map_property_value value, klass, true, new_property
           if single_line && !(mapped.is_a?(Icalendar::Values::Helpers::Array) && mapped.empty?)
-            instance_variable_set property_var, [mapped].compact
+            instance_variable_set property_var, nil.equal?(mapped) ? [] : [mapped]
           elsif mapped.is_a? Icalendar::Values::Helpers::Array
             instance_variable_set property_var, mapped.to_a.compact
           else
-            instance_variable_set property_var, [mapped].compact
+            instance_variable_set property_var, nil.equal?(mapped) ? [] : [mapped]
           end
         end
 

@@ -63,5 +63,48 @@ describe Icalendar::Component do
       expect(component.tags).to eq []
       expect(component.setter_calls).to eq 1
     end
+
+    [false, true].each do |single_line|
+      context "with a #{single_line ? 'single-line' : 'ordinary'} multi-property setter" do
+        let(:component_class) do
+          Class.new(described_class) do
+            optional_property :tags, Icalendar::Values::Text, false, false, single_line
+          end
+        end
+        let(:component) { component_class.new 'test' }
+
+        it 'preserves a value that overrides nil?' do
+          value_class = Class.new(Icalendar::Values::Text) do
+            def nil?
+              true
+            end
+          end
+          value = value_class.new 'present'
+          component.tags = value
+
+          expect(component.tags.size).to eq 1
+          expect(component.tags.first).to equal value
+        end
+
+        it 'clears existing values without keeping a nil entry' do
+          component.tags = 'present'
+          component.tags = nil
+
+          expect(component.tags).to eq []
+        end
+
+        it 'gives each instance its own mutable empty array' do
+          other = component_class.new 'other'
+          component.tags = nil
+          other.tags = nil
+          value = Icalendar::Values::Text.new 'added'
+
+          component.tags << value
+
+          expect(component.tags.first).to equal value
+          expect(other.tags).to eq []
+        end
+      end
+    end
   end
 end

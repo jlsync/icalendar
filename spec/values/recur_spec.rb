@@ -55,6 +55,48 @@ describe Icalendar::Values::Recur do
     it 'outputs in spec order' do
       expect(subject.value_ical).to eq 'FREQ=DAILY;BYDAY=SU,SA;BYYEARDAY=1,34,56,240'
     end
+
+    it 'renders extended rule fields in order' do
+      rule = 'FREQ=YEARLY;UNTIL=20261231T235959Z;INTERVAL=2;' \
+        'BYSECOND=10,20;BYMINUTE=15,45;BYHOUR=8,17;BYDAY=MO,FR;' \
+        'BYMONTHDAY=1,-1;BYYEARDAY=1,-1;BYWEEKNO=1,-1;BYMONTH=1,12;' \
+        'BYSETPOS=1,-1;WKST=MO'
+
+      input = rule.split(';').reverse.join(';')
+
+      expect(described_class.new(input).value_ical).to eq rule
+    end
+
+    it 'returns a fresh mutable string on each render' do
+      first = subject.value_ical
+      second = subject.value_ical
+
+      expect(first).not_to be_frozen
+      expect(second).not_to equal first
+      first.replace('changed output')
+      expect(subject.value_ical).to eq second
+    end
+
+    it 'reflects in-place string changes after rendering' do
+      subject.value_ical
+      subject.frequency.replace('WEEKLY')
+
+      expect(subject.value_ical).to eq 'FREQ=WEEKLY;BYDAY=SU,SA;BYYEARDAY=1,34,56,240'
+    end
+
+    it 'reflects scalar field assignments after rendering' do
+      subject.value_ical
+      subject.count = 3
+
+      expect(subject.value_ical).to eq 'FREQ=DAILY;COUNT=3;BYDAY=SU,SA;BYYEARDAY=1,34,56,240'
+    end
+
+    it 'reflects in-place list changes after rendering' do
+      subject.value_ical
+      subject.by_day << 'MO'
+
+      expect(subject.value_ical).to eq 'FREQ=DAILY;BYDAY=SU,SA,MO;BYYEARDAY=1,34,56,240'
+    end
   end
 
   describe 'field access' do

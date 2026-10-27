@@ -11,6 +11,12 @@ describe Icalendar::Values::Text do
     it 'escapes \ , ; NL' do
       expect(subject.value_ical).to eq escaped
     end
+
+    it 'preserves standalone carriage returns while escaping LF and CRLF' do
+      text = described_class.new("a\rb\r\r\nc\nd")
+
+      expect(text.value_ical).to eq "a\rb\r\\nc\\nd"
+    end
   end
 
   describe 'unescapes in initializer' do

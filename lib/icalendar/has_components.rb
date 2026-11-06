@@ -11,7 +11,7 @@ module Icalendar
       end
     end
 
-    def initialize(*args)
+    def initialize(...)
       @custom_components = Hash.new
       super
     end

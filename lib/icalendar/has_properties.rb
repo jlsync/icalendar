@@ -14,7 +14,7 @@ module Icalendar
       end
     end
 
-    def initialize(*args)
+    def initialize(...)
       @custom_properties = Hash.new
       super
     end

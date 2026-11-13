@@ -88,9 +88,9 @@ module Icalendar
 
         %i[
           << []= append clear collect! compact! concat delete delete_at
-          delete_if fill flatten! insert keep_if map! pop prepend push reject!
-          replace reverse! rotate! select! shift shuffle! slice! sort! sort_by!
-          uniq! unshift
+          delete_if fill filter! flatten! insert keep_if map! pop prepend push
+          reject! replace reverse! rotate! select! shift shuffle! slice! sort!
+          sort_by! uniq! unshift
         ].each do |mutator|
           define_method(mutator) do |*args, &block|
             @mutation_version += 1

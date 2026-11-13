@@ -133,6 +133,10 @@ describe Icalendar::Component do
       expect(custom.multiple_property?('tags')).to be true
       expect(custom.property_writer('tags')).to eq :append_tags
 
+      custom.multiple_properties.filter! { false }
+      expect(custom.multiple_property?('tags')).to be false
+      expect(custom.property_writer('tags')).to be_nil
+
       custom.single_properties << 'aa'
       expect(custom.property_writer('aa')).to eq :aa=
       custom.single_properties[0] = 'zz'

@@ -143,6 +143,10 @@ describe Icalendar::Component do
       expect(custom.single_property?('aa')).to be false
       expect(custom.single_property?('zz')).to be true
       expect(custom.property_writer('zz')).to eq :zz=
+
+      custom.single_properties << 'ww'
+      custom.single_properties.shuffle!(random: Random.new(1))
+      expect(custom.single_property?('ww')).to be true
     end
 
     it 'parses with a frozen component subclass without raising FrozenError' do

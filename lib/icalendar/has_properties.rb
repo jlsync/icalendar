@@ -81,7 +81,7 @@ module Icalendar
       class PropertyList < ::Array
         attr_reader :mutation_version
 
-        def initialize(*args, &block)
+        def initialize(...)
           @mutation_version = 0
           super
         end
@@ -92,10 +92,12 @@ module Icalendar
           reject! replace reverse! rotate! select! shift shuffle! slice! sort!
           sort_by! uniq! unshift
         ].each do |mutator|
-          define_method(mutator) do |*args, &block|
-            @mutation_version += 1
-            super(*args, &block)
-          end
+          class_eval <<~RUBY, __FILE__, __LINE__ + 1
+            def #{mutator}(...)
+              @mutation_version += 1
+              super
+            end
+          RUBY
         end
 
         EMPTY = new.freeze

@@ -33,7 +33,7 @@ module Icalendar
     optional_property :image, Icalendar::Values::Uri, false, true
 
     def initialize
-      super 'journal'
+      super 'journal', 'VJOURNAL'
       self.dtstamp = Icalendar::Values::DateTime.new Time.now.utc, 'tzid' => 'UTC'
       self.uid = new_uid
     end

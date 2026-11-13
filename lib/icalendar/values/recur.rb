@@ -27,11 +27,11 @@ module Icalendar
         keyword_init: true
       )
 
-      def initialize(value, *args)
+      def initialize(value, params = ::Icalendar::Value::EMPTY_HASH, context = ::Icalendar::Value::EMPTY_HASH)
         if value.is_a? ::Icalendar::Values::Recur
-          super value.value, *args
+          super value.value, params, context
         else
-          super Parts.new(**parse_fields(value)), *args
+          super parse_parts(value), params, context
         end
       end
 
@@ -43,21 +43,22 @@ module Icalendar
 
       def value_ical
         v = value
-        builder = ["FREQ=#{v.frequency}"]
-        builder << "UNTIL=#{v.until}" unless v.until.nil?
-        builder << "COUNT=#{v.count}" unless v.count.nil?
-        builder << "INTERVAL=#{v.interval}" unless v.interval.nil?
-        builder << "BYSECOND=#{v.by_second.join ','}" unless v.by_second.nil?
-        builder << "BYMINUTE=#{v.by_minute.join ','}" unless v.by_minute.nil?
-        builder << "BYHOUR=#{v.by_hour.join ','}" unless v.by_hour.nil?
-        builder << "BYDAY=#{v.by_day.join ','}" unless v.by_day.nil?
-        builder << "BYMONTHDAY=#{v.by_month_day.join ','}" unless v.by_month_day.nil?
-        builder << "BYYEARDAY=#{v.by_year_day.join ','}" unless v.by_year_day.nil?
-        builder << "BYWEEKNO=#{v.by_week_number.join ','}" unless v.by_week_number.nil?
-        builder << "BYMONTH=#{v.by_month.join ','}" unless v.by_month.nil?
-        builder << "BYSETPOS=#{v.by_set_position.join ','}" unless v.by_set_position.nil?
-        builder << "WKST=#{v.week_start}" unless v.week_start.nil?
-        builder.join ';'
+        buf = ::String.new('FREQ=')
+        buf << v.frequency.to_s
+        buf << ';UNTIL=' << v.until.to_s unless v.until.nil?
+        buf << ';COUNT=' << v.count.to_s unless v.count.nil?
+        buf << ';INTERVAL=' << v.interval.to_s unless v.interval.nil?
+        append_joined(buf, ';BYSECOND=', v.by_second) unless v.by_second.nil?
+        append_joined(buf, ';BYMINUTE=', v.by_minute) unless v.by_minute.nil?
+        append_joined(buf, ';BYHOUR=', v.by_hour) unless v.by_hour.nil?
+        append_joined(buf, ';BYDAY=', v.by_day) unless v.by_day.nil?
+        append_joined(buf, ';BYMONTHDAY=', v.by_month_day) unless v.by_month_day.nil?
+        append_joined(buf, ';BYYEARDAY=', v.by_year_day) unless v.by_year_day.nil?
+        append_joined(buf, ';BYWEEKNO=', v.by_week_number) unless v.by_week_number.nil?
+        append_joined(buf, ';BYMONTH=', v.by_month) unless v.by_month.nil?
+        append_joined(buf, ';BYSETPOS=', v.by_set_position) unless v.by_set_position.nil?
+        buf << ';WKST=' << v.week_start.to_s unless v.week_start.nil?
+        buf
       end
 
       private
@@ -77,23 +78,37 @@ module Icalendar
       PARSE_FIELDS_BY_SET_POSITON_REGEX = /BYSETPOS=(#{YEARDAY}(?:,#{YEARDAY})*)(?:;|\z)/i.freeze
       PARSE_FIELDS_BY_WEEK_START_REGEX = /WKST=(#{DAYNAME})/i.freeze
 
+      def append_joined(buf, prefix, list)
+        buf << prefix
+        list.each_with_index do |item, idx|
+          buf << ',' if idx > 0
+          buf << item.to_s
+        end
+      end
+
+      def parse_parts(value)
+        parts = Parts.new
+        parts.frequency = $1.upcase if value =~ PARSE_FIELDS_FREQUENCY_REGEX
+        parts.until = $1 if value =~ PARSE_FIELDS_UNTIL_REGEX
+        parts.count = $1.to_i if value =~ PARSE_FIELDS_COUNT_REGEX
+        parts.interval = $1.to_i if value =~ PARSE_FIELDS_INTERVAL_REGEX
+        unless value.is_a?(::String) && !value.include?('B') && !value.include?('b')
+          parts.by_second = $1.split(',').map(&:to_i) if value =~ PARSE_FIELDS_BY_SECOND_REGEX
+          parts.by_minute = $1.split(',').map(&:to_i) if value =~ PARSE_FIELDS_BY_MINUTE_REGEX
+          parts.by_hour = $1.split(',').map(&:to_i) if value =~ PARSE_FIELDS_BY_HOUR_REGEX
+          parts.by_day = $1.split(',') if value =~ PARSE_FIELDS_BY_DAY_REGEX
+          parts.by_month_day = $1.split(',') if value =~ PARSE_FIELDS_BY_MONTH_DAY_REGEX
+          parts.by_year_day = $1.split(',') if value =~ PARSE_FIELDS_BY_YEAR_DAY_REGEX
+          parts.by_week_number = $1.split(',') if value =~ PARSE_FIELDS_BY_WEEK_NUMBER_REGEX
+          parts.by_month = $1.split(',').map(&:to_i) if value =~ PARSE_FIELDS_BY_MONTH_REGEX
+          parts.by_set_position = $1.split(',') if value =~ PARSE_FIELDS_BY_SET_POSITON_REGEX
+        end
+        parts.week_start = $1.upcase if value =~ PARSE_FIELDS_BY_WEEK_START_REGEX
+        parts
+      end
+
       def parse_fields(value)
-        {
-          frequency: (value =~ PARSE_FIELDS_FREQUENCY_REGEX ? $1.upcase : nil),
-          until: (value =~ PARSE_FIELDS_UNTIL_REGEX ? $1 : nil),
-          count: (value =~ PARSE_FIELDS_COUNT_REGEX ? $1.to_i : nil),
-          interval: (value =~ PARSE_FIELDS_INTERVAL_REGEX ? $1.to_i : nil),
-          by_second: (value =~ PARSE_FIELDS_BY_SECOND_REGEX ? $1.split(',').map { |i| i.to_i } : nil),
-          by_minute: (value =~ PARSE_FIELDS_BY_MINUTE_REGEX ? $1.split(',').map { |i| i.to_i } : nil),
-          by_hour: (value =~ PARSE_FIELDS_BY_HOUR_REGEX ? $1.split(',').map { |i| i.to_i } : nil),
-          by_day: (value =~ PARSE_FIELDS_BY_DAY_REGEX ? $1.split(',') : nil),
-          by_month_day: (value =~ PARSE_FIELDS_BY_MONTH_DAY_REGEX ? $1.split(',') : nil),
-          by_year_day: (value =~ PARSE_FIELDS_BY_YEAR_DAY_REGEX ? $1.split(',') : nil),
-          by_week_number: (value =~ PARSE_FIELDS_BY_WEEK_NUMBER_REGEX ? $1.split(',') : nil),
-          by_month: (value =~ PARSE_FIELDS_BY_MONTH_REGEX ? $1.split(',').map { |i| i.to_i } : nil),
-          by_set_position: (value =~ PARSE_FIELDS_BY_SET_POSITON_REGEX ? $1.split(',') : nil),
-          week_start: (value =~ PARSE_FIELDS_BY_WEEK_START_REGEX ? $1.upcase : nil)
-        }
+        parse_parts(value).to_h
       end
     end
   end

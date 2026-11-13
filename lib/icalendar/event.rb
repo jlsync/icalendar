@@ -46,7 +46,7 @@ module Icalendar
     component :alarm, false
 
     def initialize
-      super 'event'
+      super 'event', 'VEVENT'
       self.dtstamp = Icalendar::Values::DateTime.new Time.now.utc, 'tzid' => 'UTC'
       self.uid = new_uid
     end

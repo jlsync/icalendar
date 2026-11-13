@@ -5,8 +5,8 @@ module Icalendar
 
     class Boolean < Value
 
-      def initialize(value, *args)
-        super value.to_s.downcase == 'true', *args
+      def initialize(value, params = ::Icalendar::Value::EMPTY_HASH, context = ::Icalendar::Value::EMPTY_HASH)
+        super value.to_s.casecmp?('true'), params, context
       end
 
       def value_ical

@@ -7,6 +7,8 @@ module Icalendar
 
     def initialize(base)
       @obj = Hash.new
+      return if base.empty?
+
       base.each do |key, value|
         self[key] = value
       end
@@ -42,8 +44,12 @@ module Icalendar
 
     def merge!(*other_hashes)
       other_hashes.each do |hash|
-        hash.each do |key, value|
-          self[key] = value
+        if hash.instance_of?(Icalendar::DowncasedHash) && instance_of?(Icalendar::DowncasedHash)
+          obj.merge!(hash.obj) unless hash.empty?
+        else
+          hash.each do |key, value|
+            self[key] = value
+          end
         end
       end
       self

@@ -5,8 +5,8 @@ module Icalendar
 
     class Float < Value
 
-      def initialize(value, *args)
-        super value.to_f, *args
+      def initialize(value, params = ::Icalendar::Value::EMPTY_HASH, context = ::Icalendar::Value::EMPTY_HASH)
+        super value.to_f, params, context
       end
 
       def value_ical

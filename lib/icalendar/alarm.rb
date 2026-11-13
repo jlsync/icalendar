@@ -23,7 +23,7 @@ module Icalendar
     optional_single_property :acknowledged, Icalendar::Values::DateTime
 
     def initialize
-      super 'alarm'
+      super 'alarm', 'VALARM'
       self.action = 'DISPLAY'
     end
 

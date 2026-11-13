@@ -391,4 +391,25 @@ describe Icalendar::Parser do
       expect(new_cal).to be_a Icalendar::Calendar
     end
   end
+
+  describe 'parameter quoting, empty parameter values, and comma splitting' do
+    it 'parses quoted, comma-separated, and empty parameters accurately' do
+      ics = <<~ICS.gsub("\n", "\r\n")
+        BEGIN:VCALENDAR
+        BEGIN:VEVENT
+        DTSTART:20240101T120000Z
+        ATTENDEE;CN="Doe, John";DELEGATED-FROM="mailto:a@example.com","mailto:b@example.com";X-EMPTY=:mailto:john@example.com
+        SUMMARY:Meeting, Phase 1
+        END:VEVENT
+        END:VCALENDAR
+      ICS
+
+      event = Icalendar::Parser.new(ics, false).parse.first.events.first
+      attendee = event.attendee.first
+      expect(attendee.ical_params['cn']).to eq ['Doe, John']
+      expect(attendee.ical_params['delegated-from']).to eq ['mailto:a@example.com', 'mailto:b@example.com']
+      expect(attendee.ical_params['x-empty']).to eq []
+      expect(event.summary).to eq 'Meeting, Phase 1'
+    end
+  end
 end

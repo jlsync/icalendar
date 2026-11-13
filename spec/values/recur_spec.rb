@@ -116,5 +116,9 @@ describe Icalendar::Values::Recur do
     it 'copies another recur' do
       expect(described_class.new(subject).value_ical).to eq subject.value_ical
     end
+
+    it 'handles nil or non-String inputs without raising NoMethodError' do
+      expect(described_class.new(nil).value_ical).to eq 'FREQ='
+    end
   end
 end

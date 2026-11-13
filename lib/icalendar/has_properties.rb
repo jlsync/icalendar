@@ -78,24 +78,66 @@ module Icalendar
     end
 
     module ClassMethods
+      class PropertyList < ::Array
+        attr_reader :mutation_version
+
+        def initialize(*args, &block)
+          @mutation_version = 0
+          super
+        end
+
+        %i[
+          << []= append clear collect! compact! concat delete delete_at
+          delete_if fill flatten! insert keep_if map! pop prepend push reject!
+          replace reverse! rotate! select! shift shuffle! slice! sort! sort_by!
+          uniq! unshift
+        ].each do |mutator|
+          define_method(mutator) do |*args, &block|
+            @mutation_version += 1
+            super(*args, &block)
+          end
+        end
+
+        EMPTY = new.freeze
+      end
+
       def properties
         single_properties + multiple_properties
       end
 
       def single_properties
-        @single_properties ||= []
+        return @single_properties if @single_properties
+        return PropertyList::EMPTY if frozen?
+
+        @single_properties = PropertyList.new
       end
 
       def multiple_properties
-        @multiple_properties ||= []
+        return @multiple_properties if @multiple_properties
+        return PropertyList::EMPTY if frozen?
+
+        @multiple_properties = PropertyList.new
       end
 
       def single_property?(prop)
-        single_properties.include?(prop.to_s)
+        single_property_lookup.key?(prop.to_s)
       end
 
       def multiple_property?(prop)
-        multiple_properties.include?(prop.to_s)
+        multiple_property_lookup.key?(prop.to_s)
+      end
+
+      def property_writer(prop)
+        singles = single_properties
+        multis = multiple_properties
+        sv = singles.respond_to?(:mutation_version) ? singles.mutation_version : singles.hash
+        mv = multis.respond_to?(:mutation_version) ? multis.mutation_version : multis.hash
+        cache = @property_writer_cache
+        return cache[2][prop.to_s] if cache && cache[0] == sv && cache[1] == mv
+
+        writers = build_property_writer_map(singles, multis)
+        @property_writer_cache = [sv, mv, writers].freeze unless frozen?
+        writers[prop.to_s]
       end
 
       def required_properties
@@ -165,13 +207,17 @@ module Icalendar
         setter = :"#{prop}="
 
         define_method "#{prop}=" do |value|
-          mapped = map_property_value value, klass, true, new_property
-          if single_line && !(mapped.is_a?(Icalendar::Values::Helpers::Array) && mapped.empty?)
-            instance_variable_set property_var, nil.equal?(mapped) ? [] : [mapped]
-          elsif mapped.is_a? Icalendar::Values::Helpers::Array
-            instance_variable_set property_var, mapped.to_a.compact
+          if !single_line && value.is_a?(::Array)
+            instance_variable_set property_var, map_multi_property_array(value, klass, new_property)
           else
-            instance_variable_set property_var, nil.equal?(mapped) ? [] : [mapped]
+            mapped = map_property_value value, klass, true, new_property
+            if single_line && !(mapped.is_a?(Icalendar::Values::Helpers::Array) && mapped.empty?)
+              instance_variable_set property_var, nil.equal?(mapped) ? [] : [mapped]
+            elsif mapped.is_a? Icalendar::Values::Helpers::Array
+              instance_variable_set property_var, mapped.to_a.compact
+            else
+              instance_variable_set property_var, nil.equal?(mapped) ? [] : [mapped]
+            end
           end
         end
 
@@ -191,6 +237,35 @@ module Icalendar
 
       private
 
+      def single_property_lookup
+        props = single_properties
+        version = props.respond_to?(:mutation_version) ? props.mutation_version : props.hash
+        cache = @single_property_cache
+        return cache[1] if cache && cache[0] == version
+
+        lookup = props.each_with_object({}) { |p, h| h[p] = true }
+        @single_property_cache = [version, lookup].freeze unless frozen?
+        lookup
+      end
+
+      def multiple_property_lookup
+        props = multiple_properties
+        version = props.respond_to?(:mutation_version) ? props.mutation_version : props.hash
+        cache = @multiple_property_cache
+        return cache[1] if cache && cache[0] == version
+
+        lookup = props.each_with_object({}) { |p, h| h[p] = true }
+        @multiple_property_cache = [version, lookup].freeze unless frozen?
+        lookup
+      end
+
+      def build_property_writer_map(singles, multis)
+        writers = {}
+        singles.each { |p| writers[p] = :"#{p}=" }
+        multis.each { |p| writers[p] = :"append_#{p}" }
+        writers
+      end
+
       def build_renderable_properties
         multi_lookup = multiple_properties.each_with_object({}) { |prop, h| h[prop] = true }
         properties.map do |prop|
@@ -206,6 +281,15 @@ module Icalendar
 
       def reset_renderable_properties_cache
         @renderable_properties = nil
+        return if frozen?
+
+        singles = single_properties
+        multis = multiple_properties
+        sv = singles.respond_to?(:mutation_version) ? singles.mutation_version : singles.hash
+        mv = multis.respond_to?(:mutation_version) ? multis.mutation_version : multis.hash
+        @single_property_cache = [sv, singles.each_with_object({}) { |p, h| h[p] = true }].freeze
+        @multiple_property_cache = [mv, multis.each_with_object({}) { |p, h| h[p] = true }].freeze
+        @property_writer_cache = [sv, mv, build_property_writer_map(singles, multis)].freeze
       end
     end
 
@@ -213,14 +297,36 @@ module Icalendar
 
     def map_property_value(value, klass, multi_valued, new_property)
       return value if value.nil? || value.is_a?(Icalendar::Value)
-      
-      params = new_property ? {'VALUE': klass.value_type} : {}
-        
+
       if value.is_a? ::Array
-        Icalendar::Values::Helpers::Array.new value, klass, params, {delimiter: (multi_valued ? ',' : ';')}
+        params = new_property ? { 'value' => klass.value_type } : {}
+        Icalendar::Values::Helpers::Array.new value, klass, params, { 'delimiter' => (multi_valued ? ',' : ';') }
+      elsif new_property
+        klass.new value, { 'value' => klass.value_type }
       else
-        klass.new value, params
+        klass.new value
       end
+    end
+
+    def map_multi_property_array(values, klass, new_property)
+      context = Icalendar::DowncasedHash.new('delimiter' => ',')
+      mapped = values.map do |v|
+        if v.is_a? Icalendar::Values::Helpers::Array
+          Icalendar::Values::Helpers::Array.new v.value, klass, v.ical_params, { 'delimiter' => v.value_delimiter }
+        elsif v.is_a? ::Array
+          params = new_property ? { 'value' => klass.value_type } : {}
+          Icalendar::Values::Helpers::Array.new v, klass, params, context
+        elsif v.is_a? Icalendar::Value
+          v
+        elsif new_property
+          klass.new v, { 'value' => klass.value_type }, context
+        else
+          params = klass <= Icalendar::Values::Helpers::TimeWithZone ? {} : Icalendar::Value::EMPTY_HASH
+          klass.new v, params, context
+        end
+      end
+      mapped.compact!
+      mapped
     end
 
   end

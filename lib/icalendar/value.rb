@@ -8,9 +8,11 @@ module Icalendar
 
   class Value < ::SimpleDelegator
 
+    EMPTY_HASH = {}.freeze
+
     attr_accessor :ical_params, :context
 
-    def initialize(value, params = {}, context = {})
+    def initialize(value, params = EMPTY_HASH, context = EMPTY_HASH)
       @ical_params = ::Icalendar::DowncasedHash(params)
       @context = ::Icalendar::DowncasedHash(context)
       super value
@@ -35,7 +37,14 @@ module Icalendar
       @serialized_params = if ical_params.empty?
         nil
       else
-        ";#{ical_params.map { |name, value| param_ical name, value }.join ';'}"
+        buf = ::String.new(';')
+        first = true
+        ical_params.each do |name, value|
+          buf << ';' unless first
+          first = false
+          append_param_ical(buf, name, value)
+        end
+        buf
       end
       @params_cached = true
       @serialized_params
@@ -66,20 +75,41 @@ module Icalendar
       self.class != default_type
     end
 
-    def param_ical(name, param_value)
+    def append_param_ical(buf, name, param_value)
+      name_str = name.to_s
+      buf << (name_str.include?('_') ? name_str.tr('_', '-').upcase : name_str.upcase) << '='
       if param_value.is_a? ::Array
-        param_value = param_value.map { |v| escape_param_value v }.join ','
+        param_value.each_with_index do |v, idx|
+          buf << ',' if idx > 0
+          append_escaped_param_value(buf, v)
+        end
       else
-        param_value = escape_param_value param_value
+        append_escaped_param_value(buf, param_value)
       end
-      "#{name.to_s.tr('_', '-').upcase}=#{param_value}"
+    end
+
+    def append_escaped_param_value(buf, value)
+      s = value.to_s
+      v = s.include?('"') ? s.gsub('"', "'") : s
+      if v.match?(ESCAPE_PARAM_VALUE_REGEX)
+        buf << '"' << v << '"'
+      else
+        buf << v
+      end
+    end
+
+    def param_ical(name, param_value)
+      buf = ::String.new
+      append_param_ical(buf, name, param_value)
+      buf
     end
 
     ESCAPE_PARAM_VALUE_REGEX = /[;:,]/.freeze
 
     def escape_param_value(value)
-      v = value.to_s.gsub('"', "'")
-      v =~ ESCAPE_PARAM_VALUE_REGEX ? %("#{v}") : v
+      s = value.to_s
+      v = s.include?('"') ? s.gsub('"', "'") : s
+      v.match?(ESCAPE_PARAM_VALUE_REGEX) ? %("#{v}") : v
     end
 
   end

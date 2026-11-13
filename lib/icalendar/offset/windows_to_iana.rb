@@ -131,13 +131,17 @@ module Icalendar
       end
 
       def normalized_tzid
-        [WINDOWS_TO_IANA[tzid]].compact
+        iana = WINDOWS_TO_IANA[tzid]
+        iana ? [iana] : []
       end
 
       private
 
       def tz
-        @tz ||= ActiveSupport::TimeZone[normalized_tzid.first || '']
+        return @tz if defined?(@tz)
+
+        iana = WINDOWS_TO_IANA[tzid]
+        @tz = iana ? ActiveSupport::TimeZone[iana] : nil
       end
     end
   end

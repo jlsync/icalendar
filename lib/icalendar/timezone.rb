@@ -75,7 +75,7 @@ module Icalendar
     component :standard, false, Icalendar::Timezone::Standard
 
     def initialize
-      super 'timezone'
+      super 'timezone', 'VTIMEZONE'
     end
 
     def valid?(strict = false)

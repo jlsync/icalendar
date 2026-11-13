@@ -5,13 +5,13 @@ module Icalendar
     class UtcOffset < Value
       Parts = ::Struct.new(:behind, :hours, :minutes, :seconds, keyword_init: true)
 
-      def initialize(value, *args)
+      def initialize(value, params = ::Icalendar::Value::EMPTY_HASH, context = ::Icalendar::Value::EMPTY_HASH)
         if value.is_a? ::Icalendar::Values::UtcOffset
           value = value.value
         else
-          value = Parts.new(**parse_fields(value))
+          value = parse_parts(value)
         end
-        super value, *args
+        super value, params, context
       end
 
       def behind?
@@ -41,14 +41,18 @@ module Icalendar
       PARSE_FIELDS_MD_REGEX = /\A(?<behind>[+-])(?<hours>\d{2})(?<minutes>\d{2})(?<seconds>\d{2})?\z/.freeze
       PARSE_FIELDS_WHITESPACE_GSUB_REGEX = /\s+/.freeze
 
-      def parse_fields(value)
+      def parse_parts(value)
         md = PARSE_FIELDS_MD_REGEX.match value.gsub(PARSE_FIELDS_WHITESPACE_GSUB_REGEX, '')
-        {
+        Parts.new(
           behind: (md[:behind] == '-'),
           hours: md[:hours].to_i,
           minutes: md[:minutes].to_i,
           seconds: md[:seconds].to_i
-        }
+        )
+      end
+
+      def parse_fields(value)
+        parse_parts(value).to_h
       end
     end
   end

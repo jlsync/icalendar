@@ -12,10 +12,10 @@ module Icalendar
         '\\N' => "\n"
       }.freeze
 
-      def initialize(value, *args)
+      def initialize(value, params = ::Icalendar::Value::EMPTY_HASH, context = ::Icalendar::Value::EMPTY_HASH)
         # One left-to-right pass keeps unescape the exact inverse of value_ical; \n and \N are newline.
         value = value.gsub(UNESCAPE_GSUB_REGEX, UNESCAPES)
-        super value, *args
+        super value, params, context
       end
 
       VALUE_ICAL_ESCAPE_REGEX = /\\|;|,|\r?\n/.freeze

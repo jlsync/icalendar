@@ -158,5 +158,31 @@ describe Icalendar::Values::DateTime do
         expect { subject }.to raise_error(ArgumentError, %r{Failed to parse \"#{value}\"})
       end
     end
+
+    context 'byte-parser boundaries and invalid inputs' do
+      it 'parses valid leap day UTC datetimes' do
+        dt = described_class.new '20240229T235959Z'
+        expect(dt.value).to eq ::DateTime.new(2024, 2, 29, 23, 59, 59)
+        expect(dt.tz_utc).to be true
+      end
+
+      it 'raises FormatError on invalid calendar or clock fields' do
+        %w[20230229T120000 20240101T250000 20240101T126000 20240101T120061 2024010aT120000].each do |bad|
+          expect { described_class.new(bad) }.to raise_error(Icalendar::Values::DateTime::FormatError)
+        end
+      end
+
+      it 'accepts 24:00:00 and RFC 5545 leap seconds (:60) identically to strptime' do
+        %w[20240101T240000 20240101T120060 20161231T235960Z].each do |valid|
+          dt = described_class.new valid
+          expect(dt.value).to eq ::DateTime.strptime(valid, '%Y%m%dT%H%M%S')
+        end
+      end
+
+      it 'accepts frozen params like Value::EMPTY_HASH without raising FrozenError' do
+        dt = described_class.new('20240101T120000Z', Icalendar::Value::EMPTY_HASH)
+        expect(dt.tz_utc).to be true
+      end
+    end
   end
 end

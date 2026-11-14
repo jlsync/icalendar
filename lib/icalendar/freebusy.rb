@@ -19,7 +19,7 @@ module Icalendar
     optional_property :request_status
 
     def initialize
-      super 'freebusy'
+      super 'freebusy', 'VFREEBUSY'
       self.dtstamp = Icalendar::Values::DateTime.new Time.now.utc, 'tzid' => 'UTC'
       self.uid = new_uid
     end

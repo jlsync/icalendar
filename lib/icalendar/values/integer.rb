@@ -5,8 +5,8 @@ module Icalendar
 
     class Integer < Value
 
-      def initialize(value, *args)
-        super value.to_i, *args
+      def initialize(value, params = ::Icalendar::Value::EMPTY_HASH, context = ::Icalendar::Value::EMPTY_HASH)
+        super value.to_i, params, context
       end
 
       def value_ical

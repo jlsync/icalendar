@@ -8,9 +8,9 @@ module Icalendar
     class Uri < Value
       CONTROL_BYTES_REGEX = /[\x00-\x1F\x7F]/.freeze
 
-      def initialize(value, *args)
+      def initialize(value, params = ::Icalendar::Value::EMPTY_HASH, context = ::Icalendar::Value::EMPTY_HASH)
         parsed = ::URI.parse(value) rescue value
-        super parsed, *args
+        super parsed, params, context
       end
 
       def value_ical

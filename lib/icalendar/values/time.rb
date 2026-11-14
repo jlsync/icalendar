@@ -10,24 +10,27 @@ module Icalendar
       include Helpers::TimeWithZone
 
       FORMAT = '%H%M%S'
+      UTC_FORMAT = '%H%M%SZ'
 
-      def initialize(value, params = {}, *args)
+      def initialize(value, params = {}, context = ::Icalendar::Value::EMPTY_HASH)
         if value.is_a? ::String
-          params['tzid'] = 'UTC' if value.end_with? 'Z'
-          super ::DateTime.strptime(value, FORMAT).to_time, params, *args
+          if value.end_with? 'Z'
+            params = params.dup if params.frozen?
+            params['tzid'] = 'UTC'
+          end
+          super ::DateTime.strptime(value, FORMAT).to_time, params, context
         elsif value.respond_to? :to_time
-          super value.to_time, params, *args
+          super value.to_time, params, context
         else
           super
         end
       end
 
       def value_ical
-        formatted = value.strftime FORMAT
         if tz_utc
-          "#{formatted}Z"
+          value.strftime UTC_FORMAT
         else
-          formatted
+          value.strftime FORMAT
         end
       end
 

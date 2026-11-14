@@ -8,7 +8,7 @@ module Icalendar
 
         attr_reader :value_delimiter
 
-        def initialize(value, klass, params = {}, context = {})
+        def initialize(value, klass, params = {}, context = ::Icalendar::Value::EMPTY_HASH)
           context = ::Icalendar::DowncasedHash(context)
           @value_delimiter = context['delimiter'] || ','
           @params_merged = false
@@ -34,7 +34,7 @@ module Icalendar
           unless @params_merged
             value.each do |v|
               v.params_ical # ensure child cache reflects current state
-              ical_params.merge! v.ical_params
+              ical_params.merge! v.ical_params unless v.ical_params.empty?
             end
             @params_merged = true
             @params_cached = false

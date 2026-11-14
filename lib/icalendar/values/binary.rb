@@ -8,8 +8,8 @@ module Icalendar
     class Binary < Value
 
       def params_ical
-        ical_param :value, 'BINARY'
-        ical_param :encoding, 'BASE64'
+        ical_param 'value', 'BINARY'
+        ical_param 'encoding', 'BASE64'
         super
       end
 

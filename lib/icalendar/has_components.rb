@@ -3,6 +3,16 @@
 module Icalendar
 
   module HasComponents
+    COMPONENT_COLLECTION_METHODS = {
+      'event' => :events,
+      'todo' => :todos,
+      'journal' => :journals,
+      'freebusy' => :freebusys,
+      'timezone' => :timezones,
+      'alarm' => :alarms,
+      'daylight' => :daylights,
+      'standard' => :standards
+    }.freeze
 
     def self.included(base)
       base.extend ClassMethods
@@ -19,7 +29,9 @@ module Icalendar
     def add_component(c)
       c.parent = self
       yield c if block_given?
-      send("#{c.name.downcase}s") << c
+      component_name = c.name
+      collection = COMPONENT_COLLECTION_METHODS[component_name] || "#{component_name.downcase}s"
+      send(collection) << c
       c
     end
 

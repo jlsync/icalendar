@@ -20,7 +20,10 @@ module Icalendar
       private
 
       def tz
-        @tz ||= ActiveSupport::TimeZone[tzid.split.first]
+        return @tz if defined?(@tz)
+
+        first_word = tzid[/\S+/]
+        @tz = first_word ? ActiveSupport::TimeZone[first_word] : nil
       end
     end
   end

@@ -6,11 +6,11 @@ module Icalendar
     class Duration < Value
       Parts = ::Struct.new(:past, :weeks, :days, :hours, :minutes, :seconds, keyword_init: true)
 
-      def initialize(value, *args)
+      def initialize(value, params = ::Icalendar::Value::EMPTY_HASH, context = ::Icalendar::Value::EMPTY_HASH)
         if value.is_a? ::Icalendar::Values::Duration
-          super value.value, *args
+          super value.value, params, context
         else
-          super Parts.new(**parse_fields(value)), *args
+          super parse_parts(value), params, context
         end
       end
 
@@ -20,16 +20,23 @@ module Icalendar
 
       def value_ical
         v = value
-        return "#{'-' if past?}P#{v.weeks}W" if v.weeks > 0
-        builder = []
-        builder << '-' if past?
-        builder << 'P'
-        builder << "#{v.days}D" if v.days > 0
-        builder << 'T' if v.hours > 0 || v.minutes > 0 || v.seconds > 0
-        builder << "#{v.hours}H" if v.hours > 0
-        builder << "#{v.minutes}M" if v.minutes > 0
-        builder << "#{v.seconds}S" if v.seconds > 0
-        builder.join
+        if v.weeks > 0
+          buf = ::String.new
+          buf << '-' if past?
+          buf << 'P' << v.weeks.to_s << 'W'
+          return buf
+        end
+        buf = ::String.new
+        buf << '-' if past?
+        buf << 'P'
+        buf << v.days.to_s << 'D' if v.days > 0
+        if v.hours > 0 || v.minutes > 0 || v.seconds > 0
+          buf << 'T'
+          buf << v.hours.to_s << 'H' if v.hours > 0
+          buf << v.minutes.to_s << 'M' if v.minutes > 0
+          buf << v.seconds.to_s << 'S' if v.seconds > 0
+        end
+        buf
       end
 
       private
@@ -41,15 +48,19 @@ module Icalendar
       DURATION_MINUTES_REGEX = /(\d+)M/.freeze
       DURATION_SECONDS_REGEX = /(\d+)S/.freeze
 
-      def parse_fields(value)
-        {
+      def parse_parts(value)
+        Parts.new(
           past: (value =~ DURATION_PAST_REGEX ? $1 == '-' : false),
           weeks: (value =~ DURATION_WEEKS_REGEX ? $1.to_i : 0),
           days: (value =~ DURATION_DAYS_REGEX ? $1.to_i : 0),
           hours: (value =~ DURATION_HOURS_REGEX ? $1.to_i : 0),
           minutes: (value =~ DURATION_MINUTES_REGEX ? $1.to_i : 0),
           seconds: (value =~ DURATION_SECONDS_REGEX ? $1.to_i : 0)
-        }
+        )
+      end
+
+      def parse_fields(value)
+        parse_parts(value).to_h
       end
     end
 

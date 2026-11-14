@@ -3,9 +3,16 @@
 module Icalendar
   class Offset
     def self.build(value, params, timezone_store)
-      return nil if params.nil? || params['tzid'].nil?
+      return nil if params.nil?
 
-      tzid = Array(params['tzid']).first
+      raw_tzid = params['tzid']
+      return nil if raw_tzid.nil?
+
+      tzid = case raw_tzid
+             when ::String then raw_tzid
+             when ::Array then raw_tzid.first
+             else Array(raw_tzid).first
+             end
 
       TYPES.each do |klass|
         offset = klass.new(tzid, value, timezone_store)
@@ -21,7 +28,7 @@ module Icalendar
     end
 
     def normalized_tzid
-      Array(tzid)
+      tzid.is_a?(::String) ? [tzid] : Array(tzid)
     end
 
     private

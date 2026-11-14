@@ -19,7 +19,7 @@ module Icalendar
       module TimeWithZone
         attr_reader :tz_utc, :timezone_store
 
-        def initialize(value, params = {}, context = {})
+        def initialize(value, params = {}, context = ::Icalendar::Value::EMPTY_HASH)
           params = Icalendar::DowncasedHash(params)
           context = Icalendar::DowncasedHash(context)
           @tz_utc = params['tzid'] == 'UTC'

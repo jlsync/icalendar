@@ -31,10 +31,11 @@ module Icalendar
 
     def to_ical
       buffer = String.new
-      buffer << "BEGIN:#{ical_name}\r\n"
+      name = ical_name.to_s
+      buffer << 'BEGIN:' << name << "\r\n"
       append_ical_properties(buffer)
       append_ical_components(buffer)
-      buffer << "END:#{ical_name}\r\n"
+      buffer << 'END:' << name << "\r\n"
       buffer
     end
 
@@ -101,21 +102,27 @@ module Icalendar
         return fold_ascii(long_line, indent)
       end
 
-      chars = long_line.scan(ICAL_FOLD_LONG_LINE_SCAN_REGEX) # split in graphemes
-      folded = [String.new]
-      bytes = 0
+      max_line_length = Icalendar::MAX_LINE_LENGTH
       indent_bytesize = indent.bytesize
-      chars.each do |c|
-        bytes += c.bytesize
-        if bytes > Icalendar::MAX_LINE_LENGTH
-          # Split here
-          folded << indent.dup
-          bytes = indent_bytesize + c.bytesize
+      size = long_line.bytesize
+      continuation_length = max_line_length - indent_bytesize
+      continuation_length = 1 if continuation_length < 1
+      folded = String.new(
+        capacity: size + ((size / continuation_length) + 1) * (2 + indent_bytesize),
+        encoding: long_line.encoding
+      )
+      bytes = 0
+      long_line.scan(ICAL_FOLD_LONG_LINE_SCAN_REGEX) do |c|
+        c_bytesize = c.bytesize
+        bytes += c_bytesize
+        if bytes > max_line_length
+          folded << "\r\n" << indent
+          bytes = indent_bytesize + c_bytesize
         end
-        folded[-1] << c
+        folded << c
       end
 
-      folded.join("\r\n")
+      folded
     end
 
     def fold_ascii(long_line, indent)

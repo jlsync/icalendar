@@ -65,14 +65,11 @@ module Icalendar
                   when 'class', 'method', 'name' then "ip_#{fields[:name]}"
                   else fields[:name]
                   end
-      multi_property = component.class.multiple_property? prop_name
+      writer = component.class.property_writer prop_name
+      multi_property = writer ? component.class.multiple_property?(prop_name) : false
       prop_value = wrap_property_value component, fields, multi_property
       begin
-        method_name = if multi_property
-          "append_#{prop_name}"
-        else
-          "#{prop_name}="
-        end
+        method_name = writer || "#{prop_name}="
         component.send method_name, prop_value
       rescue NoMethodError => nme
         if strict?
@@ -93,14 +90,13 @@ module Icalendar
     def wrap_property_value(component, fields, multi_property)
       klass = get_wrapper_class component, fields
       if wrap_in_array? klass, fields[:value], multi_property
-        delimiter = fields[:value].match(WRAP_PROPERTY_VALUE_DELIMETER_REGEX)[1]
-        Icalendar::Values::Helpers::Array.new split_property_value(fields[:value]),
+        parts, delimiter = split_property_value_with_delimiter(fields[:value])
+        Icalendar::Values::Helpers::Array.new parts,
                                      klass,
                                      fields[:params],
-                                     delimiter: delimiter,
-                                     timezone_store: timezone_store
+                                     { 'delimiter' => delimiter, 'timezone_store' => timezone_store }
       else
-        klass.new fields[:value], fields[:params], timezone_store: timezone_store
+        klass.new fields[:value], fields[:params], { 'timezone_store' => timezone_store }
       end
     rescue Icalendar::Values::DateTime::FormatError => fe
       raise fe if strict?
@@ -113,10 +109,11 @@ module Icalendar
 
     def wrap_in_array?(klass, value, multi_property)
       # Both wrap regexes require a delimiter, so skip them when there is none.
-      return false unless value.is_a?(String) && (value.include?(',') || value.include?(';'))
+      return false unless value.is_a?(String)
+      return false unless multi_property ? (value.include?(',') || value.include?(';')) : value.include?(';')
 
       klass.value_type != 'RECUR' &&
-        ((multi_property && value =~ WRAP_IN_ARRAY_REGEX_1) || value =~ WRAP_IN_ARRAY_REGEX_2)
+        (multi_property ? WRAP_IN_ARRAY_REGEX_1.match?(value) : WRAP_IN_ARRAY_REGEX_2.match?(value))
     end
 
     GET_WRAPPER_CLASS_GSUB_REGEX = /(?:\A|-|\s+)(.)/.freeze
@@ -125,7 +122,7 @@ module Icalendar
       klass = component.class.default_property_types[fields[:name]]
       if !fields[:params]['value'].nil?
         klass_name = fields[:params].delete('value').first
-        unless klass_name.upcase == klass.value_type
+        unless klass_name.casecmp?(klass.value_type)
           klass_name = "Icalendar::Values::#{klass_name.downcase.gsub(GET_WRAPPER_CLASS_GSUB_REGEX) { |m| m[-1].upcase }}"
           begin
             klass = Object.const_get klass_name if Object.const_defined?(klass_name)
@@ -165,16 +162,36 @@ module Icalendar
     end
 
     def split_property_value(value)
+      split_property_value_with_delimiter(value).first
+    end
+
+    def split_property_value_with_delimiter(value)
       parts = []
+      delimiter = nil
       start = 0
       value.scan(WRAP_PROPERTY_VALUE_SPLIT_REGEX) do
-        delimiter = Regexp.last_match
-        parts << value[start...delimiter.begin(1)]
-        start = delimiter.end(1)
+        match = Regexp.last_match
+        delimiter ||= match[1]
+        parts << value[start...match.begin(1)]
+        start = match.end(1)
       end
       parts << value[start..-1]
       parts.pop while parts.last == ''
-      parts
+      [parts, delimiter]
+    end
+
+    def standard_components
+      @standard_components ||= {
+        'VCALENDAR' => Calendar,
+        'VEVENT' => Event,
+        'VTODO' => Todo,
+        'VJOURNAL' => Journal,
+        'VFREEBUSY' => Freebusy,
+        'VTIMEZONE' => Timezone,
+        'VALARM' => Alarm,
+        'STANDARD' => Timezone::Standard,
+        'DAYLIGHT' => Timezone::Daylight
+      }.freeze
     end
 
     def component_class
@@ -191,18 +208,28 @@ module Icalendar
       raise ParseError.new("ics file nested too deeply") if parse_depth > parse_depth_limit
       while (fields = next_fields)
         if fields[:name] == 'end'
-          klass_name = fields[:value].delete_prefix('V').capitalize
-          timezone_store.store(component) if klass_name == 'Timezone'
+          if fields[:value] == 'VTIMEZONE' || fields[:value].delete_prefix('V').casecmp?('Timezone')
+            timezone_store.store(component)
+          end
           break
         elsif fields[:name] == 'begin'
-          klass_name = fields[:value].delete_prefix('V').tr('-', '_').capitalize
-          Icalendar.logger.debug "Adding component #{klass_name}" if debug_logging_in_parse?
-          if Object.const_defined? "Icalendar::#{klass_name}"
-            component.add_component parse_component(Object.const_get("Icalendar::#{klass_name}").new)
-          elsif Object.const_defined? "Icalendar::Timezone::#{klass_name}"
-            component.add_component parse_component(Object.const_get("Icalendar::Timezone::#{klass_name}").new)
+          component_klass = standard_components[fields[:value]]
+          if component_klass
+            if debug_logging_in_parse?
+              klass_name = fields[:value].delete_prefix('V').tr('-', '_').capitalize
+              Icalendar.logger.debug "Adding component #{klass_name}"
+            end
+            component.add_component parse_component(component_klass.new)
           else
-            component.add_custom_component klass_name, parse_component(Component.new klass_name.downcase, fields[:value])
+            klass_name = fields[:value].delete_prefix('V').tr('-', '_').capitalize
+            Icalendar.logger.debug "Adding component #{klass_name}" if debug_logging_in_parse?
+            if Object.const_defined? "Icalendar::#{klass_name}"
+              component.add_component parse_component(Object.const_get("Icalendar::#{klass_name}").new)
+            elsif Object.const_defined? "Icalendar::Timezone::#{klass_name}"
+              component.add_component parse_component(Object.const_get("Icalendar::Timezone::#{klass_name}").new)
+            else
+              component.add_custom_component klass_name, parse_component(Component.new klass_name.downcase, fields[:value])
+            end
           end
         else
           parse_property component, fields
@@ -225,8 +252,8 @@ module Icalendar
         if @data.nil?
           break
         elsif @data.bytesize > 1 && @data.start_with?(' ', "\t")
-          line << @data[1..]
-        elsif @data.empty? || @data.match?(NEXT_FIELDS_WHITESPACE_REGEX)
+          line << (@data.encoding.ascii_compatible? ? @data.byteslice(1, @data.bytesize - 1) : @data[1..])
+        elsif @data.empty? || ((@data.getbyte(0) <= 32 || !@data.encoding.ascii_compatible?) && @data.match?(NEXT_FIELDS_WHITESPACE_REGEX))
           next
         else
           break
@@ -255,7 +282,7 @@ module Icalendar
 
       unless debug
         colon = input.byteindex(':')
-        if colon
+        if colon && !((semi = input.byteindex(';')) && semi < colon)
           name = input.byteslice(0, colon)
           if name.match?(SIMPLE_LINE_NAME_REGEX)
             normalize_name!(name)
@@ -278,13 +305,20 @@ module Icalendar
       end
 
       params = {}
-      parts[:params].scan PARAM_REGEX do |match|
-        param_name = match[0].downcase
-        params[param_name] ||= []
-        match[1].scan PVALUE_REGEX do |param_value|
-          if param_value.size > 0
-            param_value = param_value.gsub(PVALUE_GSUB_REGEX, '')
-            params[param_name] << param_value
+      unless parts[:params].empty?
+        parts[:params].scan PARAM_REGEX do |match|
+          param_name = match[0].downcase
+          param_values = (params[param_name] ||= [])
+          raw_values = match[1]
+          if !raw_values.include?('"') && !raw_values.include?(',')
+            param_values << raw_values if raw_values.bytesize > 0
+          else
+            raw_values.scan PVALUE_REGEX do |param_value|
+              if param_value.size > 0
+                param_value = param_value.gsub(PVALUE_GSUB_REGEX, '') if param_value.include?('"')
+                param_values << param_value
+              end
+            end
           end
         end
       end

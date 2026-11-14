@@ -25,7 +25,7 @@ module Icalendar
     component :freebusy
 
     def initialize
-      super 'calendar'
+      super 'calendar', 'VCALENDAR'
       self.prodid = 'icalendar-ruby'
       self.version = '2.0'
       self.calscale = 'GREGORIAN'
